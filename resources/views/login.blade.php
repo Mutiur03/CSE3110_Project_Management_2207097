@@ -74,14 +74,27 @@
                                 continue.</p>
                         </div>
 
-                        <form action="#" method="POST" class="space-y-5">
+                        @if ($errors->any())
+                            <div class="mb-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                                Please check your email and password.
+                            </div>
+                        @endif
+
+                        <form action="{{ route('login.store') }}" method="POST" class="space-y-5">
                             @csrf
 
                             <div>
                                 <label for="email" class="block text-sm font-semibold text-neutral-800">Email
                                     address</label>
-                                <input type="email" id="email" name="email" autocomplete="email" required
-                                    class="mt-2 block w-full rounded-md border border-neutral-300 bg-white px-3.5 py-3 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">
+                                <input type="email" id="email" name="email" value="{{ old('email') }}" autocomplete="email" required
+                                    @class([
+                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10',
+                                        'border-rose-300' => $errors->has('email'),
+                                        'border-neutral-300' => ! $errors->has('email'),
+                                    ])>
+                                @error('email')
+                                    <p class="mt-2 text-sm text-rose-700">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <div>
@@ -90,7 +103,11 @@
                                 <div class="relative mt-2">
                                     <input type="password" id="password" name="password"
                                         autocomplete="current-password" required
-                                        class="block w-full rounded-md border border-neutral-300 bg-white px-3.5 py-3 pr-12 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">
+                                        @class([
+                                            'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10',
+                                            'border-rose-300' => $errors->has('password'),
+                                            'border-neutral-300' => ! $errors->has('password'),
+                                        ])>
                                     <button type="button" data-password-toggle="password" aria-label="Show password"
                                         class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-neutral-950">
                                         <svg class="size-5" data-eye-icon xmlns="http://www.w3.org/2000/svg"
@@ -115,6 +132,9 @@
                                         <span class="sr-only">Show password</span>
                                     </button>
                                 </div>
+                                @error('password')
+                                    <p class="mt-2 text-sm text-rose-700">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <div

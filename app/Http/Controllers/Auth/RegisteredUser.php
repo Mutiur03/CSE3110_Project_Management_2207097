@@ -10,11 +10,15 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
-class RegisteredUserController extends Controller
+class RegisteredUser extends Controller
 {
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
-        return view('register');
+        if (Auth::check()) {
+            return redirect('/')->with('status', 'You are already logged in.');
+        } else {
+            return view('register');
+        }
     }
 
     public function store(Request $request): RedirectResponse
