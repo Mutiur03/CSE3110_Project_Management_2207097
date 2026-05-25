@@ -1,5 +1,5 @@
 <x-layout>
-    <body class="min-h-screen bg-stone-50 font-sans text-neutral-950 antialiased">
+    <div class="min-h-screen bg-stone-50 font-sans text-neutral-950 antialiased">
         <div class="pointer-events-none fixed inset-0 -z-10 bg-linear-to-br from-white via-stone-50 to-neutral-100">
         </div>
 
@@ -22,14 +22,14 @@
                     <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
                         @auth
                             <a class="rounded-md border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950 sm:px-4"
-                                href="{{ url('/dashboard') }}">Dashboard</a>
+                                href="{{ url('/dashboard') }}" wire:navigate>Dashboard</a>
                         @else
                             <a class="rounded-md px-2.5 py-2 text-sm font-semibold text-neutral-500 transition hover:text-neutral-950 sm:px-4"
-                                href="{{ route('login') }}">Log in</a>
+                                href="{{ route('login') }}" wire:navigate>Log in</a>
 
                             @if (Route::has('register'))
                                 <a class="rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-neutral-800 sm:px-4"
-                                    href="{{ route('register') }}">Get started</a>
+                                    href="{{ route('register') }}" wire:navigate>Get started</a>
                             @endif
                         @endauth
                     </div>
@@ -353,5 +353,5 @@
                 });
             });
         </script>
-    </body>
+    </div>
 </x-layout>
