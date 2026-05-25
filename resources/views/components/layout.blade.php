@@ -29,11 +29,6 @@
             });
         });
     </script> --}}
-    <script>
-        document.querySelectorAll('a').forEach(link => {
-            link.setAttribute('wire:navigate', '');
-        });
-    </script>
 </body>
 
 </html>

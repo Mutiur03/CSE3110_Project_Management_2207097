@@ -1,0 +1,118 @@
+@props([
+    'title' => 'Dashboard',
+    'eyebrow' => 'Workspace',
+    'currentProject' => null,
+    'projects' => collect(),
+])
+
+<x-layout>
+    <x-slot:title>
+        {{ $title }}
+    </x-slot:title>
+
+    <main class="min-h-screen bg-stone-50 font-sans text-neutral-950">
+        <div class="flex min-h-screen">
+            <x-dashboard.sidebar :current-project="$currentProject" :projects="$projects" />
+
+            <div class="min-w-0 flex-1">
+                <header class="sticky top-0 z-30 border-b border-neutral-200 bg-white/90 backdrop-blur">
+                    <div class="grid items-center gap-4 px-4 py-3 sm:px-6 lg:grid-cols-[1fr_minmax(24rem,42rem)_1fr] lg:px-8">
+                        <div class="flex min-w-0 items-center gap-4">
+                            <button type="button" id="sidebar-toggle"
+                                class="rounded-md border border-neutral-200 bg-white p-2 text-neutral-700 lg:hidden">
+                                <span class="sr-only">Open sidebar</span>
+                                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.8" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </button>
+
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">{{ $eyebrow }}</p>
+                                <h1 class="truncate text-lg font-bold text-neutral-950 sm:text-xl">{{ $title }}</h1>
+                            </div>
+                        </div>
+
+                        <div class="hidden items-center gap-2 md:flex lg:justify-center">
+                            <label class="relative min-w-0 flex-1">
+                                <span class="sr-only">Search</span>
+                                <svg class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.8" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
+                                </svg>
+                                <input type="search" placeholder="Search projects, teams, issues"
+                                    class="w-full rounded-md border border-neutral-200 bg-stone-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                            </label>
+                            <a href="{{ route('projects.create') }}" wire:navigate
+                                class="inline-flex shrink-0 items-center gap-2 rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                                </svg>
+                                Create
+                            </a>
+                        </div>
+
+                        <div class="hidden lg:block"></div>
+                    </div>
+                </header>
+
+                <section class="px-4 py-6 sm:px-6 lg:px-8">
+                    {{ $slot }}
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        (() => {
+            if (window.scrumlabDashboardReady) {
+                return;
+            }
+
+            window.scrumlabDashboardReady = true;
+
+            const closeProjectSwitchers = () => {
+                document.querySelectorAll('[data-project-switcher-menu]').forEach(menu => {
+                    menu.classList.add('hidden');
+                });
+                document.querySelectorAll('[data-project-switcher-icon]').forEach(icon => {
+                    icon.classList.remove('rotate-180');
+                });
+            };
+
+            document.addEventListener('click', event => {
+                const sidebarToggle = event.target.closest('#sidebar-toggle');
+
+                if (sidebarToggle) {
+                    document.getElementById('dashboard-sidebar')?.classList.toggle('hidden');
+                    return;
+                }
+
+                const switcherButton = event.target.closest('[data-project-switcher-button]');
+
+                if (switcherButton) {
+                    const switcher = switcherButton.closest('[data-project-switcher]');
+                    const menu = switcher?.querySelector('[data-project-switcher-menu]');
+                    const icon = switcher?.querySelector('[data-project-switcher-icon]');
+
+                    menu?.classList.toggle('hidden');
+                    icon?.classList.toggle('rotate-180');
+                    return;
+                }
+
+                if (! event.target.closest('[data-project-switcher]')) {
+                    closeProjectSwitchers();
+                }
+            });
+
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    closeProjectSwitchers();
+                }
+            });
+        })();
+    </script>
+</x-layout>
