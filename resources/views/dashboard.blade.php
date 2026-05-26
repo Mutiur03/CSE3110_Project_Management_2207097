@@ -97,7 +97,8 @@
                         <h2 class="text-lg font-bold">Teams in this project</h2>
                         <p class="text-sm text-neutral-500">Each team belongs to {{ $currentProject->name }}</p>
                     </div>
-                    <a href="#" class="text-sm font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4">
+                    <a href="{{ route('projects.teams.index', $currentProject) }}" wire:navigate
+                        class="text-sm font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4">
                         Add team
                     </a>
                 </div>
