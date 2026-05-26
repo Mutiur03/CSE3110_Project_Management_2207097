@@ -72,6 +72,10 @@
                                 </select>
                             </form>
                         @endif
+                        <a href="{{ route('projects.issues.create', $currentProject) }}" wire:navigate
+                            class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                            Create issue
+                        </a>
                     </div>
                 </div>
             </section>

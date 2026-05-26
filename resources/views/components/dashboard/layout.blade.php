@@ -83,7 +83,74 @@
                 });
             };
 
+            const updateIssueForms = () => {
+                document.querySelectorAll('[data-issue-form]').forEach(form => {
+                    const type = form.querySelector('[data-issue-type]')?.value;
+                    const teamId = form.querySelector('[data-issue-team]')?.value;
+                    const assigneeInput = form.querySelector('[data-issue-assignee]');
+                    const parentField = form.querySelector('[data-issue-parent-field]');
+                    const pointsField = form.querySelector('[data-issue-points-field]');
+                    const parentInput = parentField?.querySelector('select, input, textarea');
+                    const pointsInput = pointsField?.querySelector('select, input, textarea');
+                    const showParent = type === 'story' || type === 'task';
+                    const showPoints = type === 'story' || type === 'task';
+
+                    parentField?.classList.toggle('hidden', ! showParent);
+                    pointsField?.classList.toggle('hidden', ! showPoints);
+
+                    if (parentInput) {
+                        parentInput.disabled = ! showParent;
+                    }
+
+                    if (pointsInput) {
+                        pointsInput.disabled = ! showPoints;
+                    }
+
+                    if (assigneeInput) {
+                        let selectedAssigneeIsAvailable = ! assigneeInput.value;
+
+                        assigneeInput.querySelectorAll('option').forEach(option => {
+                            if (! option.value) {
+                                option.hidden = false;
+                                option.disabled = false;
+                                return;
+                            }
+
+                            const teamIds = (option.dataset.teamIds || '').split(',').filter(Boolean);
+                            const isAvailable = ! teamId || teamIds.includes(teamId);
+
+                            option.hidden = ! isAvailable;
+                            option.disabled = ! isAvailable;
+
+                            if (option.selected && isAvailable) {
+                                selectedAssigneeIsAvailable = true;
+                            }
+                        });
+
+                        if (! selectedAssigneeIsAvailable) {
+                            assigneeInput.value = '';
+                        }
+                    }
+                });
+            };
+
+            updateIssueForms();
+            document.addEventListener('livewire:navigated', updateIssueForms);
+
             document.addEventListener('click', event => {
+                const modalTrigger = event.target.closest('[data-modal-target]');
+
+                if (modalTrigger) {
+                    event.preventDefault();
+                    document.getElementById(modalTrigger.dataset.modalTarget)?.classList.remove('hidden');
+                    return;
+                }
+
+                if (event.target.matches('[data-modal]') || event.target.closest('[data-modal-close]')) {
+                    event.target.closest('[data-modal]')?.classList.add('hidden');
+                    return;
+                }
+
                 const sidebarToggle = event.target.closest('#sidebar-toggle');
 
                 if (sidebarToggle) {
@@ -111,6 +178,13 @@
             document.addEventListener('keydown', event => {
                 if (event.key === 'Escape') {
                     closeProjectSwitchers();
+                    document.querySelectorAll('[data-modal]').forEach(modal => modal.classList.add('hidden'));
+                }
+            });
+
+            document.addEventListener('change', event => {
+                if (event.target.matches('[data-issue-type], [data-issue-team]')) {
+                    updateIssueForms();
                 }
             });
         })();

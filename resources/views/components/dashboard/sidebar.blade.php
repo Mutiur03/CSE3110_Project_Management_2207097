@@ -16,6 +16,7 @@
     $isDashboardActive = request()->routeIs('dashboard');
     $isMembersActive = request()->routeIs('projects.members.*');
     $isTeamsActive = request()->routeIs('projects.teams.*');
+    $isIssuesActive = request()->routeIs('projects.issues.*');
 @endphp
 
 <aside id="dashboard-sidebar"
@@ -103,6 +104,16 @@
                         d="M16 19.5v-1.25A3.25 3.25 0 0 0 12.75 15h-5.5A3.25 3.25 0 0 0 4 18.25v1.25M10 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM18.5 11.75a2.75 2.75 0 1 0 0-5.5" />
                 </svg>
                 Teams
+            </a>
+
+            <a href="{{ route('projects.issues.index', $currentProject) }}" wire:navigate
+                class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isIssuesActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
+                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 6.75h10.5M9 12h10.5M9 17.25h10.5M4.5 6.75h.01M4.5 12h.01M4.5 17.25h.01" />
+                </svg>
+                Issues
             </a>
         @endif
     </nav>

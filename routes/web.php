@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\RegisteredUser;
 use App\Http\Controllers\Auth\Login;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IssueController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\TeamController;
@@ -28,4 +29,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/{project}/teams', [TeamController::class, 'index'])->name('projects.teams.index');
     Route::post('/projects/{project}/teams', [TeamController::class, 'store'])->name('projects.teams.store');
     Route::post('/projects/{project}/teams/{team}/members', [TeamController::class, 'addMember'])->name('projects.teams.members.store');
+    Route::get('/projects/{project}/issues', [IssueController::class, 'index'])->name('projects.issues.index');
+    Route::get('/projects/{project}/issues/create', [IssueController::class, 'create'])->name('projects.issues.create');
+    Route::post('/projects/{project}/issues', [IssueController::class, 'store'])->name('projects.issues.store');
+    Route::get('/projects/{project}/issues/{issue}', [IssueController::class, 'show'])->name('projects.issues.show');
+    Route::patch('/projects/{project}/issues/{issue}', [IssueController::class, 'update'])->name('projects.issues.update');
 });
