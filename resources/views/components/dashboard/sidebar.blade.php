@@ -17,6 +17,8 @@
     $isMembersActive = request()->routeIs('projects.members.*');
     $isTeamsActive = request()->routeIs('projects.teams.*');
     $isIssuesActive = request()->routeIs('projects.issues.*');
+    $isSprintsActive = request()->routeIs('projects.sprints.*');
+    $isBoardActive = request()->routeIs('projects.board.*');
 @endphp
 
 <aside id="dashboard-sidebar"
@@ -114,6 +116,25 @@
                         d="M9 6.75h10.5M9 12h10.5M9 17.25h10.5M4.5 6.75h.01M4.5 12h.01M4.5 17.25h.01" />
                 </svg>
                 Issues
+            </a>
+
+            <a href="{{ route('projects.sprints.index', $currentProject) }}" wire:navigate
+                class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isSprintsActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
+                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M7 3.75v3M17 3.75v3M4.75 8.25h14.5M6.5 5.25h11A2.25 2.25 0 0 1 19.75 7.5v10.25A2.25 2.25 0 0 1 17.5 20h-11a2.25 2.25 0 0 1-2.25-2.25V7.5A2.25 2.25 0 0 1 6.5 5.25Z" />
+                </svg>
+                Sprints
+            </a>
+
+            <a href="{{ route('projects.board.index', $currentProject) }}" wire:navigate
+                class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isBoardActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
+                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 5.5h16M6.5 8.5v10M12 8.5v10M17.5 8.5v10" />
+                </svg>
+                Board
             </a>
         @endif
     </nav>

@@ -29,9 +29,15 @@ class ProjectMemberController extends Controller
     {
         $this->authorizeProjectManagement($request, $project);
 
+        $request->merge([
+            'email' => Str::lower((string) $request->input('email')),
+        ]);
+
         $validated = $request->validate([
             'email' => ['required', 'email', Rule::exists('users', 'email')],
             'role' => ['required', Rule::in(['project_owner', 'scrum_master', 'developer', 'viewer'])],
+        ], [
+            'email.exists' => 'That email is not registered yet. Ask the user to create an account first, then add them to the project.',
         ]);
 
         $user = User::where('email', $validated['email'])->firstOrFail();

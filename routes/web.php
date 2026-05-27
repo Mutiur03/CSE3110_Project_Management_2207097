@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\Auth\RegisteredUser;
 use App\Http\Controllers\Auth\Login;
+use App\Http\Controllers\BoardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IssueController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\SprintController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,4 +36,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/projects/{project}/issues', [IssueController::class, 'store'])->name('projects.issues.store');
     Route::get('/projects/{project}/issues/{issue}', [IssueController::class, 'show'])->name('projects.issues.show');
     Route::patch('/projects/{project}/issues/{issue}', [IssueController::class, 'update'])->name('projects.issues.update');
+    Route::get('/projects/{project}/sprints', [SprintController::class, 'index'])->name('projects.sprints.index');
+    Route::post('/projects/{project}/sprints', [SprintController::class, 'store'])->name('projects.sprints.store');
+    Route::patch('/projects/{project}/sprints/{sprint}', [SprintController::class, 'update'])->name('projects.sprints.update');
+    Route::post('/projects/{project}/sprints/{sprint}/issues', [SprintController::class, 'addIssue'])->name('projects.sprints.issues.store');
+    Route::delete('/projects/{project}/sprints/{sprint}/issues/{issue}', [SprintController::class, 'removeIssue'])->name('projects.sprints.issues.destroy');
+    Route::post('/projects/{project}/sprints/{sprint}/start', [SprintController::class, 'start'])->name('projects.sprints.start');
+    Route::post('/projects/{project}/sprints/{sprint}/complete', [SprintController::class, 'complete'])->name('projects.sprints.complete');
+    Route::get('/projects/{project}/board', [BoardController::class, 'index'])->name('projects.board.index');
+    Route::patch('/projects/{project}/board/issues/{issue}/status', [BoardController::class, 'updateIssueStatus'])->name('projects.board.issues.status');
 });

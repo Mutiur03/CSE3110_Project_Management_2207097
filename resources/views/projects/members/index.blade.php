@@ -21,22 +21,35 @@
                         Members belong directly to the project. They can work without a team, or be assigned into teams later.
                     </p>
                 </div>
-                <a href="{{ route('dashboard', ['project' => $currentProject->id]) }}" wire:navigate
-                    class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
-                    Back to dashboard
-                </a>
+                <div class="flex gap-2">
+                    <button type="button" data-modal-target="add-project-member-modal"
+                        class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                        Add member
+                    </button>
+                    <a href="{{ route('dashboard', ['project' => $currentProject->id]) }}" wire:navigate
+                        class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
+                        Back
+                    </a>
+                </div>
             </div>
         </section>
 
         <aside class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-            <h3 class="text-sm font-bold text-neutral-950">Add member</h3>
-            <form method="POST" action="{{ route('projects.members.store', $currentProject) }}" class="mt-4 space-y-4">
+            <h3 class="text-sm font-bold text-neutral-950">Access layer</h3>
+            <p class="mt-2 text-sm leading-6 text-neutral-600">Project members can work directly in the project, with or without team assignment.</p>
+        </aside>
+    </div>
+
+    <x-dashboard.modal id="add-project-member-modal" title="Add project member" :open="old('_form') === 'add-project-member'">
+        <form method="POST" action="{{ route('projects.members.store', $currentProject) }}" class="space-y-4">
                 @csrf
+                <input type="hidden" name="_form" value="add-project-member">
 
                 <div>
                     <label for="email" class="block text-sm font-semibold text-neutral-950">User email</label>
                     <input id="email" name="email" type="email" value="{{ old('email') }}" required
                         class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                    <p class="mt-2 text-xs font-medium text-neutral-500">The user must already have a ScrumLab account.</p>
                     @error('email')
                         <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
                     @enderror
@@ -59,9 +72,8 @@
                     class="inline-flex w-full justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                     Add to project
                 </button>
-            </form>
-        </aside>
-    </div>
+        </form>
+    </x-dashboard.modal>
 
     @error('member')
         <p class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ $message }}</p>
@@ -83,34 +95,41 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('projects.members.update', [$currentProject, $member]) }}"
-                        class="flex gap-2">
-                        @csrf
-                        @method('PATCH')
+                    <p class="text-sm font-semibold text-neutral-600">{{ $roles[$member->pivot->role] ?? $member->pivot->role }}</p>
 
-                        <label class="sr-only" for="member-{{ $member->id }}-role">Project role</label>
-                        <select id="member-{{ $member->id }}-role" name="role"
-                            class="min-w-0 flex-1 rounded-md border border-neutral-200 bg-stone-50 px-3 py-2 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
-                            @foreach ($roles as $value => $label)
-                                <option value="{{ $value }}" @selected($member->pivot->role === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <button type="submit"
-                            class="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
-                            Save
-                        </button>
-                    </form>
+                    <button type="button" data-modal-target="manage-member-{{ $member->id }}"
+                        class="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950 lg:justify-self-end">
+                        Manage
+                    </button>
 
-                    <form method="POST" action="{{ route('projects.members.destroy', [$currentProject, $member]) }}"
-                        class="lg:justify-self-end">
-                        @csrf
-                        @method('DELETE')
+                    <x-dashboard.modal id="manage-member-{{ $member->id }}" title="Manage {{ $member->name }}">
+                        <form method="POST" action="{{ route('projects.members.update', [$currentProject, $member]) }}" class="space-y-4">
+                            @csrf
+                            @method('PATCH')
 
-                        <button type="submit"
-                            class="rounded-md px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50">
-                            Remove
-                        </button>
-                    </form>
+                            <label class="block text-sm font-semibold text-neutral-950" for="member-{{ $member->id }}-role">Project role</label>
+                            <select id="member-{{ $member->id }}-role" name="role"
+                                class="w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                                @foreach ($roles as $value => $label)
+                                    <option value="{{ $value }}" @selected($member->pivot->role === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <button type="submit"
+                                class="w-full rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                Save role
+                            </button>
+                        </form>
+
+                        <form method="POST" action="{{ route('projects.members.destroy', [$currentProject, $member]) }}" class="mt-4 border-t border-neutral-200 pt-4">
+                            @csrf
+                            @method('DELETE')
+
+                            <button type="submit"
+                                class="w-full rounded-md px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50">
+                                Remove from project
+                            </button>
+                        </form>
+                    </x-dashboard.modal>
                 </div>
             @endforeach
         </div>

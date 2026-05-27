@@ -12,16 +12,27 @@
                         Teams organize the people working inside this project. Issues can be assigned to a team so workload stays visible.
                     </p>
                 </div>
-                <a href="{{ route('dashboard', ['project' => $currentProject->id]) }}" wire:navigate
-                    class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
-                    Back to dashboard
-                </a>
+                <div class="flex gap-2">
+                    <button type="button" data-modal-target="create-team-modal"
+                        class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                        Create team
+                    </button>
+                    <a href="{{ route('dashboard', ['project' => $currentProject->id]) }}" wire:navigate
+                        class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
+                        Back
+                    </a>
+                </div>
             </div>
         </section>
 
         <aside class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-            <h3 class="text-sm font-bold text-neutral-950">Create team</h3>
-            <form method="POST" action="{{ route('projects.teams.store', $currentProject) }}" class="mt-4 space-y-4">
+            <h3 class="text-sm font-bold text-neutral-950">Team workflow</h3>
+            <p class="mt-2 text-sm leading-6 text-neutral-600">Create teams when the project needs grouped ownership. Project members can still work without teams.</p>
+        </aside>
+    </div>
+
+    <x-dashboard.modal id="create-team-modal" title="Create team">
+        <form method="POST" action="{{ route('projects.teams.store', $currentProject) }}" class="space-y-4">
                 @csrf
 
                 <div>
@@ -46,9 +57,8 @@
                     class="inline-flex w-full justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                     Create team
                 </button>
-            </form>
-        </aside>
-    </div>
+        </form>
+    </x-dashboard.modal>
 
     <div class="mt-6">
         @if ($teams->isEmpty())
@@ -91,22 +101,30 @@
                             </div>
                         </div>
 
-                        <form method="POST" action="{{ route('projects.teams.members.store', [$currentProject, $team]) }}"
-                            class="mt-5 grid gap-3 border-t border-neutral-200 pt-4 sm:grid-cols-[1fr_10rem_auto]">
+                        <div class="mt-5 border-t border-neutral-200 pt-4">
+                            <button type="button" data-modal-target="add-team-member-{{ $team->id }}"
+                                class="rounded-md bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                Add member
+                            </button>
+                        </div>
+
+                        <x-dashboard.modal id="add-team-member-{{ $team->id }}" title="Add member to {{ $team->name }}">
+                            <form method="POST" action="{{ route('projects.teams.members.store', [$currentProject, $team]) }}"
+                                class="space-y-4">
                             @csrf
 
-                            <label class="sr-only" for="team-{{ $team->id }}-user">Project member</label>
+                            <label class="block text-sm font-semibold text-neutral-950" for="team-{{ $team->id }}-user">Project member</label>
                             <select id="team-{{ $team->id }}-user" name="user_id" required
-                                class="rounded-md border border-neutral-200 bg-stone-50 px-3 py-2 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                                class="w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                                 <option value="">Select member</option>
                                 @foreach ($projectMembers as $member)
                                     <option value="{{ $member->id }}">{{ $member->name }}</option>
                                 @endforeach
                             </select>
 
-                            <label class="sr-only" for="team-{{ $team->id }}-role">Role</label>
+                            <label class="block text-sm font-semibold text-neutral-950" for="team-{{ $team->id }}-role">Role</label>
                             <select id="team-{{ $team->id }}-role" name="role" required
-                                class="rounded-md border border-neutral-200 bg-stone-50 px-3 py-2 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                                class="w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                                 <option value="developer">Developer</option>
                                 <option value="scrum_master">Scrum master</option>
                                 <option value="qa">QA</option>
@@ -114,10 +132,11 @@
                             </select>
 
                             <button type="submit"
-                                class="rounded-md bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                class="w-full rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                                 Add
                             </button>
-                        </form>
+                            </form>
+                        </x-dashboard.modal>
                     </article>
                 @endforeach
             </div>

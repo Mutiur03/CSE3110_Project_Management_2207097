@@ -48,6 +48,43 @@ class ProjectMemberManagementTest extends TestCase
         ]);
     }
 
+    public function test_project_member_email_is_normalized_before_adding(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $member = User::factory()->create(['email' => 'member@example.com']);
+
+        $response = $this->actingAs($owner)->post(route('projects.members.store', $project), [
+            'email' => 'MEMBER@EXAMPLE.COM',
+            'role' => 'developer',
+            '_form' => 'add-project-member',
+        ]);
+
+        $response->assertRedirect(route('projects.members.index', $project));
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id,
+            'user_id' => $member->id,
+            'role' => 'developer',
+        ]);
+    }
+
+    public function test_unregistered_email_cannot_be_added_as_project_member(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+
+        $response = $this->actingAs($owner)->from(route('projects.members.index', $project))->post(route('projects.members.store', $project), [
+            'email' => 'missing@example.com',
+            'role' => 'developer',
+            '_form' => 'add-project-member',
+        ]);
+
+        $response->assertRedirect(route('projects.members.index', $project));
+        $response->assertSessionHasErrors('email');
+        $this->assertDatabaseMissing('project_members', [
+            'project_id' => $project->id,
+            'role' => 'developer',
+        ]);
+    }
+
     public function test_project_member_role_can_be_updated(): void
     {
         [$owner, $project] = $this->createProjectWithOwner();
