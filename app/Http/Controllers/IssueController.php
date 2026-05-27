@@ -19,8 +19,8 @@ class IssueController extends Controller
         $this->authorizeProjectAccess($request, $project);
 
         $issues = $project->issues()
-            ->with(['assignee', 'team'])
-            ->latest()
+            ->with(['assignee', 'reporter', 'team', 'parentIssue'])
+            ->orderBy('key')
             ->get();
 
         return view('projects.issues.index', [
@@ -29,7 +29,7 @@ class IssueController extends Controller
             'issues' => $issues,
             'members' => $this->projectMembersWithTeams($project),
             'teams' => $project->teams()->orderBy('name')->get(),
-            'parentIssues' => $project->issues()->whereIn('type', ['epic', 'story'])->orderBy('key')->get(),
+            'parentIssues' => $project->issues()->whereIn('type', ['epic', 'story', 'task'])->orderBy('key')->get(),
         ]);
     }
 
@@ -42,7 +42,7 @@ class IssueController extends Controller
             'currentProject' => $project,
             'members' => $this->projectMembersWithTeams($project),
             'teams' => $project->teams()->orderBy('name')->get(),
-            'parentIssues' => $project->issues()->whereIn('type', ['epic', 'story'])->orderBy('key')->get(),
+            'parentIssues' => $project->issues()->whereIn('type', ['epic', 'story', 'task'])->orderBy('key')->get(),
         ]);
     }
 
@@ -90,11 +90,23 @@ class IssueController extends Controller
         return view('projects.issues.show', [
             'projects' => $this->userProjects($request),
             'currentProject' => $project,
-            'issue' => $issue->load(['reporter', 'assignee', 'team', 'parentIssue', 'comments.user']),
+            'issue' => $issue->load([
+                'reporter',
+                'assignee',
+                'team',
+                'parentIssue',
+                'comments.user',
+                'childIssues' => fn ($query) => $query
+                    ->with(['reporter', 'assignee', 'team'])
+                    ->orderBy('key'),
+                'childIssues.childIssues' => fn ($query) => $query
+                    ->with(['reporter', 'assignee', 'team'])
+                    ->orderBy('key'),
+            ]),
             'members' => $this->projectMembersWithTeams($project),
             'teams' => $project->teams()->orderBy('name')->get(),
             'parentIssues' => $project->issues()
-                ->whereIn('type', ['epic', 'story'])
+                ->whereIn('type', ['epic', 'story', 'task'])
                 ->where('id', '!=', $issue->id)
                 ->orderBy('key')
                 ->get(),
@@ -147,20 +159,20 @@ class IssueController extends Controller
             ->with('status', 'Issue updated.');
     }
 
-    private function rules(Project $project, ?Issue $issue = null): array
+    private function rules(Project $project, ?Issue $issue = null, ?string $type = null): array
     {
         return [
             'title' => ['required', 'string', 'max:180'],
             'description' => ['nullable', 'string', 'max:4000'],
-            'type' => ['required', Rule::in(['epic', 'story', 'task', 'bug'])],
+            'type' => ['required', Rule::in(['epic', 'story', 'task', 'subtask', 'bug'])],
             'status' => ['required', Rule::in(['backlog', 'selected', 'in_progress', 'review', 'done'])],
             'priority' => ['required', Rule::in(['low', 'medium', 'high', 'urgent'])],
-            'story_points' => ['nullable', 'integer', 'min:1', 'max:100'],
-            'severity' => ['nullable', Rule::in(['minor', 'major', 'critical', 'blocker'])],
-            'steps_to_reproduce' => ['nullable', 'string', 'max:4000'],
-            'expected_result' => ['nullable', 'string', 'max:2000'],
-            'actual_result' => ['nullable', 'string', 'max:2000'],
-            'environment' => ['nullable', 'string', 'max:180'],
+            'story_points' => [Rule::requiredIf(in_array($type, ['story', 'task'], true)), 'nullable', 'integer', 'min:1', 'max:100'],
+            'severity' => [Rule::requiredIf($type === 'bug'), 'nullable', Rule::in(['minor', 'major', 'critical', 'blocker'])],
+            'steps_to_reproduce' => [Rule::requiredIf($type === 'bug'), 'nullable', 'string', 'max:4000'],
+            'expected_result' => [Rule::requiredIf($type === 'bug'), 'nullable', 'string', 'max:2000'],
+            'actual_result' => [Rule::requiredIf($type === 'bug'), 'nullable', 'string', 'max:2000'],
+            'environment' => [Rule::requiredIf($type === 'bug'), 'nullable', 'string', 'max:180'],
             'assignee_id' => [
                 'nullable',
                 Rule::exists('project_members', 'user_id')->where('project_id', $project->id),
@@ -170,6 +182,7 @@ class IssueController extends Controller
                 Rule::exists('teams', 'id')->where('project_id', $project->id),
             ],
             'parent_issue_id' => [
+                Rule::requiredIf(in_array($type, ['story', 'subtask'], true)),
                 'nullable',
                 Rule::exists('issues', 'id')->where('project_id', $project->id),
                 Rule::notIn([$issue?->id]),
@@ -179,10 +192,13 @@ class IssueController extends Controller
 
     private function validateIssue(Request $request, Project $project, ?Issue $issue = null): array
     {
-        $validated = $request->validate($this->rules($project, $issue));
+        $validated = $request->validate($this->rules($project, $issue, $request->input('type')));
 
-        if (in_array($validated['type'], ['epic', 'bug'], true)) {
+        if (in_array($validated['type'], ['epic', 'task', 'bug'], true)) {
             $validated['parent_issue_id'] = null;
+        }
+
+        if (in_array($validated['type'], ['epic', 'subtask', 'bug'], true)) {
             $validated['story_points'] = null;
         }
 
@@ -205,9 +221,9 @@ class IssueController extends Controller
                 ]);
             }
 
-            if ($validated['type'] === 'task' && ! in_array($parentIssue->type, ['epic', 'story'], true)) {
+            if ($validated['type'] === 'subtask' && ! in_array($parentIssue->type, ['story', 'task'], true)) {
                 throw ValidationException::withMessages([
-                    'parent_issue_id' => 'A task can only be linked under an epic or story.',
+                    'parent_issue_id' => 'A subtask can only be linked under a story or task.',
                 ]);
             }
         }

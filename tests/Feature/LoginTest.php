@@ -17,6 +17,30 @@ class LoginTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_authenticated_user_is_redirected_from_login_page(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/login');
+
+        $response->assertRedirect(route('dashboard'));
+    }
+
+    public function test_landing_page_prevents_stale_guest_buttons_after_login(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/');
+        $cacheControl = $response->headers->get('Cache-Control');
+
+        $response->assertOk();
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('no-cache', $cacheControl);
+        $response->assertSee('Dashboard');
+        $response->assertDontSee('Log in');
+        $response->assertDontSee('Get started');
+    }
+
     public function test_users_can_authenticate(): void
     {
         $user = User::factory()->create([

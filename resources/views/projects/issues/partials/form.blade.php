@@ -8,7 +8,7 @@
 
 <div class="grid gap-5" data-issue-form>
     <div>
-        <label for="{{ $fieldPrefix }}-title" class="block text-sm font-semibold text-neutral-950">Title</label>
+        <label for="{{ $fieldPrefix }}-title" class="block text-sm font-semibold text-neutral-950">Title <span class="text-red-600">*</span></label>
         <input id="{{ $fieldPrefix }}-title" name="title" type="text" value="{{ old('title', $issue?->title) }}" required
             class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
         @error('title')
@@ -27,17 +27,17 @@
 
     <div class="grid gap-5 md:grid-cols-3">
         <div>
-            <label for="{{ $fieldPrefix }}-type" class="block text-sm font-semibold text-neutral-950">Type</label>
+            <label for="{{ $fieldPrefix }}-type" class="block text-sm font-semibold text-neutral-950">Type <span class="text-red-600">*</span></label>
             <select id="{{ $fieldPrefix }}-type" name="type" required data-issue-type
                 class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
-                @foreach (['epic' => 'Epic', 'story' => 'Story', 'task' => 'Task', 'bug' => 'Bug'] as $value => $label)
+                @foreach (['epic' => 'Epic', 'story' => 'Story', 'task' => 'Task', 'subtask' => 'Subtask', 'bug' => 'Bug'] as $value => $label)
                     <option value="{{ $value }}" @selected($issueType === $value)>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
 
         <div>
-            <label for="{{ $fieldPrefix }}-status" class="block text-sm font-semibold text-neutral-950">Status</label>
+            <label for="{{ $fieldPrefix }}-status" class="block text-sm font-semibold text-neutral-950">Status <span class="text-red-600">*</span></label>
             <select id="{{ $fieldPrefix }}-status" name="status" required
                 class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                 @foreach (['backlog' => 'Backlog', 'selected' => 'Selected', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'] as $value => $label)
@@ -47,7 +47,7 @@
         </div>
 
         <div>
-            <label for="{{ $fieldPrefix }}-priority" class="block text-sm font-semibold text-neutral-950">Priority</label>
+            <label for="{{ $fieldPrefix }}-priority" class="block text-sm font-semibold text-neutral-950">Priority <span class="text-red-600">*</span></label>
             <select id="{{ $fieldPrefix }}-priority" name="priority" required
                 class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                 @foreach (['low' => 'Low', 'medium' => 'Medium', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label)
@@ -94,7 +94,7 @@
         </div>
 
         <div data-issue-parent-field>
-            <label for="{{ $fieldPrefix }}-parent-issue-id" class="block text-sm font-semibold text-neutral-950">Parent</label>
+            <label for="{{ $fieldPrefix }}-parent-issue-id" class="block text-sm font-semibold text-neutral-950">Parent <span class="text-red-600">*</span></label>
             <select id="{{ $fieldPrefix }}-parent-issue-id" name="parent_issue_id" data-issue-parent
                 class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                 <option value="">No parent</option>
@@ -104,17 +104,17 @@
                     </option>
                 @endforeach
             </select>
-            <p class="mt-2 text-xs text-neutral-500">Stories can sit under epics. Tasks can sit under stories or epics.</p>
+            <p class="mt-2 text-xs text-neutral-500">Stories sit under epics. Subtasks sit under stories or tasks.</p>
             @error('parent_issue_id')
                 <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
             @enderror
         </div>
 
         <div data-issue-points-field>
-            <label for="{{ $fieldPrefix }}-story-points" class="block text-sm font-semibold text-neutral-950">Points</label>
+            <label for="{{ $fieldPrefix }}-story-points" class="block text-sm font-semibold text-neutral-950">Points <span class="text-red-600">*</span></label>
             <input id="{{ $fieldPrefix }}-story-points" name="story_points" type="number" min="1" max="100" value="{{ old('story_points', $issue?->story_points) }}"
                 class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
-            <p class="mt-2 text-xs text-neutral-500">Useful for stories and tasks during sprint planning.</p>
+            <p class="mt-2 text-xs text-neutral-500">Useful for stories and standalone tasks during sprint planning.</p>
         </div>
     </div>
 
@@ -129,7 +129,7 @@
 
         <div class="mt-4 grid gap-4 md:grid-cols-2">
             <div>
-                <label for="{{ $fieldPrefix }}-severity" class="block text-sm font-semibold text-neutral-950">Severity</label>
+                <label for="{{ $fieldPrefix }}-severity" class="block text-sm font-semibold text-neutral-950">Severity <span class="text-red-600">*</span></label>
                 <select id="{{ $fieldPrefix }}-severity" name="severity"
                     class="mt-2 w-full rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">
                     @foreach (['minor' => 'Minor', 'major' => 'Major', 'critical' => 'Critical', 'blocker' => 'Blocker'] as $value => $label)
@@ -142,7 +142,7 @@
             </div>
 
             <div>
-                <label for="{{ $fieldPrefix }}-environment" class="block text-sm font-semibold text-neutral-950">Environment</label>
+                <label for="{{ $fieldPrefix }}-environment" class="block text-sm font-semibold text-neutral-950">Environment <span class="text-red-600">*</span></label>
                 <input id="{{ $fieldPrefix }}-environment" name="environment" type="text" value="{{ old('environment', $issue?->environment) }}"
                     placeholder="Chrome, Windows, staging"
                     class="mt-2 w-full rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">
@@ -153,7 +153,7 @@
         </div>
 
         <div class="mt-4">
-            <label for="{{ $fieldPrefix }}-steps-to-reproduce" class="block text-sm font-semibold text-neutral-950">Steps to reproduce</label>
+            <label for="{{ $fieldPrefix }}-steps-to-reproduce" class="block text-sm font-semibold text-neutral-950">Steps to reproduce <span class="text-red-600">*</span></label>
             <textarea id="{{ $fieldPrefix }}-steps-to-reproduce" name="steps_to_reproduce" rows="3"
                 class="mt-2 w-full rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">{{ old('steps_to_reproduce', $issue?->steps_to_reproduce) }}</textarea>
             @error('steps_to_reproduce')
@@ -163,7 +163,7 @@
 
         <div class="mt-4 grid gap-4 md:grid-cols-2">
             <div>
-                <label for="{{ $fieldPrefix }}-expected-result" class="block text-sm font-semibold text-neutral-950">Expected result</label>
+                <label for="{{ $fieldPrefix }}-expected-result" class="block text-sm font-semibold text-neutral-950">Expected result <span class="text-red-600">*</span></label>
                 <textarea id="{{ $fieldPrefix }}-expected-result" name="expected_result" rows="3"
                     class="mt-2 w-full rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">{{ old('expected_result', $issue?->expected_result) }}</textarea>
                 @error('expected_result')
@@ -172,7 +172,7 @@
             </div>
 
             <div>
-                <label for="{{ $fieldPrefix }}-actual-result" class="block text-sm font-semibold text-neutral-950">Actual result</label>
+                <label for="{{ $fieldPrefix }}-actual-result" class="block text-sm font-semibold text-neutral-950">Actual result <span class="text-red-600">*</span></label>
                 <textarea id="{{ $fieldPrefix }}-actual-result" name="actual_result" rows="3"
                     class="mt-2 w-full rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">{{ old('actual_result', $issue?->actual_result) }}</textarea>
                 @error('actual_result')

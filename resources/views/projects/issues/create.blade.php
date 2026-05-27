@@ -4,7 +4,7 @@
             <p class="text-sm font-semibold text-neutral-500">{{ $currentProject->key }}</p>
             <h2 class="mt-2 text-2xl font-bold tracking-normal text-neutral-950">Create backlog issue</h2>
             <p class="mt-2 text-sm leading-6 text-neutral-600">
-                Create an epic, story, task, or bug for this project. Team and assignee can be added later.
+                Create an epic, story, task, subtask, or bug for this project. Team and assignee can be added later.
             </p>
         </div>
 

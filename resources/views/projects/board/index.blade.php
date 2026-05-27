@@ -3,6 +3,7 @@
         'epic' => 'bg-purple-100 text-purple-700',
         'story' => 'bg-sky-100 text-sky-700',
         'task' => 'bg-emerald-100 text-emerald-700',
+        'subtask' => 'bg-amber-100 text-amber-700',
         'bug' => 'bg-rose-100 text-rose-700',
     ];
 @endphp

@@ -32,6 +32,19 @@ class DashboardTest extends TestCase
         $response->assertSee('Create your first Scrum workspace');
     }
 
+    public function test_dashboard_prevents_browser_back_cache_after_logout(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        $cacheControl = $response->headers->get('Cache-Control');
+
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('no-cache', $cacheControl);
+        $response->assertHeader('Pragma', 'no-cache');
+    }
+
     public function test_authenticated_user_can_view_project_dashboard_data(): void
     {
         $user = User::factory()->create();
@@ -73,6 +86,7 @@ class DashboardTest extends TestCase
         $response->assertSee('Epic');
         $response->assertSee('Story');
         $response->assertSee('Task');
+        $response->assertSee('Subtask');
         $response->assertSee('Bug');
     }
 }

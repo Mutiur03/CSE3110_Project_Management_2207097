@@ -16,7 +16,7 @@
         ? $currentProject->teams()->orderBy('name')->get()
         : collect();
     $globalParentIssues = $currentProject
-        ? $currentProject->issues()->whereIn('type', ['epic', 'story'])->orderBy('key')->get()
+        ? $currentProject->issues()->whereIn('type', ['epic', 'story', 'task'])->orderBy('key')->get()
         : collect();
 @endphp
 
@@ -140,9 +140,11 @@
                     const bugField = form.querySelector('[data-issue-bug-field]');
                     const parentInput = parentField?.querySelector('select, input, textarea');
                     const pointsInput = pointsField?.querySelector('select, input, textarea');
-                    const showParent = type === 'story' || type === 'task';
+                    const showParent = type === 'story' || type === 'subtask';
                     const showPoints = type === 'story' || type === 'task';
                     const showBugFields = type === 'bug';
+                    const requiresParent = type === 'story' || type === 'subtask';
+                    const requiresPoints = type === 'story' || type === 'task';
 
                     parentField?.classList.toggle('hidden', ! showParent);
                     pointsField?.classList.toggle('hidden', ! showPoints);
@@ -150,14 +152,17 @@
 
                     if (parentInput) {
                         parentInput.disabled = ! showParent;
+                        parentInput.required = requiresParent;
                     }
 
                     if (pointsInput) {
                         pointsInput.disabled = ! showPoints;
+                        pointsInput.required = requiresPoints;
                     }
 
                     bugField?.querySelectorAll('select, input, textarea').forEach(input => {
                         input.disabled = ! showBugFields;
+                        input.required = showBugFields;
                     });
 
                     if (parentSelect) {
@@ -173,8 +178,8 @@
                             const parentType = option.dataset.parentType;
                             const isAvailable = type === 'story'
                                 ? parentType === 'epic'
-                                : type === 'task'
-                                    ? parentType === 'epic' || parentType === 'story'
+                                : type === 'subtask'
+                                    ? parentType === 'story' || parentType === 'task'
                                     : false;
 
                             option.hidden = ! isAvailable;

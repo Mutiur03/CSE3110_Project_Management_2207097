@@ -42,9 +42,10 @@ class IssueManagementTest extends TestCase
         $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
             'title' => 'Add issue creation flow',
             'description' => 'Create project-scoped issue CRUD.',
-            'type' => 'story',
+            'type' => 'task',
             'status' => 'backlog',
             'priority' => 'high',
+            'story_points' => 3,
         ]);
 
         $issue = Issue::where('key', 'CP-1')->firstOrFail();
@@ -118,7 +119,25 @@ class IssueManagementTest extends TestCase
         $this->assertSame(5, $issue->story_points);
     }
 
-    public function test_task_can_be_created_under_story(): void
+    public function test_story_requires_parent_and_points(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Register account',
+            'type' => 'story',
+            'status' => 'backlog',
+            'priority' => 'medium',
+        ]);
+
+        $response->assertSessionHasErrors(['parent_issue_id', 'story_points']);
+        $this->assertDatabaseMissing('issues', [
+            'project_id' => $project->id,
+            'title' => 'Register account',
+        ]);
+    }
+
+    public function test_subtask_can_be_created_under_story(): void
     {
         [$owner, $project] = $this->createProjectWithOwner();
         $story = $this->createIssue($project, $owner, [
@@ -129,7 +148,7 @@ class IssueManagementTest extends TestCase
 
         $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
             'title' => 'Build registration form',
-            'type' => 'task',
+            'type' => 'subtask',
             'status' => 'backlog',
             'priority' => 'medium',
             'parent_issue_id' => $story->id,
@@ -140,7 +159,122 @@ class IssueManagementTest extends TestCase
 
         $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
         $this->assertSame($story->id, $issue->parent_issue_id);
+        $this->assertNull($issue->story_points);
+    }
+
+    public function test_issue_detail_shows_child_issues(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $epic = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Authentication',
+            'type' => 'epic',
+        ]);
+        $story = $this->createIssue($project, $owner, [
+            'key' => 'CP-2',
+            'title' => 'User can log in',
+            'type' => 'story',
+            'parent_issue_id' => $epic->id,
+            'story_points' => 5,
+        ]);
+        $subtask = $this->createIssue($project, $owner, [
+            'key' => 'CP-3',
+            'title' => 'Build login form',
+            'type' => 'subtask',
+            'parent_issue_id' => $story->id,
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('projects.issues.show', [$project, $epic]));
+
+        $response->assertOk();
+        $response->assertSee('Child issues');
+        $response->assertSee($story->title);
+        $response->assertSee($subtask->title);
+    }
+
+    public function test_subtask_requires_parent(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Build registration form',
+            'type' => 'subtask',
+            'status' => 'backlog',
+            'priority' => 'medium',
+        ]);
+
+        $response->assertSessionHasErrors('parent_issue_id');
+        $this->assertDatabaseMissing('issues', [
+            'project_id' => $project->id,
+            'title' => 'Build registration form',
+        ]);
+    }
+
+    public function test_task_clears_parent_issue(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $story = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Register account',
+            'type' => 'story',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Configure mail service',
+            'type' => 'task',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'parent_issue_id' => $story->id,
+            'story_points' => 3,
+        ]);
+
+        $issue = Issue::where('key', 'CP-2')->firstOrFail();
+
+        $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
+        $this->assertNull($issue->parent_issue_id);
         $this->assertSame(3, $issue->story_points);
+    }
+
+    public function test_task_requires_points(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Configure mail service',
+            'type' => 'task',
+            'status' => 'backlog',
+            'priority' => 'medium',
+        ]);
+
+        $response->assertSessionHasErrors('story_points');
+        $this->assertDatabaseMissing('issues', [
+            'project_id' => $project->id,
+            'title' => 'Configure mail service',
+        ]);
+    }
+
+    public function test_subtask_cannot_be_created_under_epic(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $epic = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Authentication',
+            'type' => 'epic',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Build registration form',
+            'type' => 'subtask',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'parent_issue_id' => $epic->id,
+        ]);
+
+        $response->assertSessionHasErrors('parent_issue_id');
+        $this->assertDatabaseMissing('issues', [
+            'project_id' => $project->id,
+            'title' => 'Build registration form',
+        ]);
     }
 
     public function test_story_cannot_be_created_under_story(): void
@@ -158,6 +292,7 @@ class IssueManagementTest extends TestCase
             'status' => 'backlog',
             'priority' => 'medium',
             'parent_issue_id' => $story->id,
+            'story_points' => 3,
         ]);
 
         $response->assertSessionHasErrors('parent_issue_id');
@@ -183,6 +318,11 @@ class IssueManagementTest extends TestCase
             'priority' => 'high',
             'parent_issue_id' => $epic->id,
             'story_points' => 8,
+            'severity' => 'major',
+            'environment' => 'Local browser',
+            'steps_to_reproduce' => 'Open the reset form.',
+            'expected_result' => 'The reset form works.',
+            'actual_result' => 'The reset form fails.',
         ]);
 
         $issue = Issue::where('key', 'CP-2')->firstOrFail();
@@ -219,6 +359,30 @@ class IssueManagementTest extends TestCase
             'environment' => 'Chrome on Windows staging',
             'expected_result' => 'Password reset email is sent.',
             'actual_result' => 'A server error appears.',
+        ]);
+    }
+
+    public function test_bug_requires_bug_report_details(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Password reset crashes',
+            'type' => 'bug',
+            'status' => 'backlog',
+            'priority' => 'urgent',
+        ]);
+
+        $response->assertSessionHasErrors([
+            'severity',
+            'environment',
+            'steps_to_reproduce',
+            'expected_result',
+            'actual_result',
+        ]);
+        $this->assertDatabaseMissing('issues', [
+            'project_id' => $project->id,
+            'title' => 'Password reset crashes',
         ]);
     }
 
@@ -294,6 +458,11 @@ class IssueManagementTest extends TestCase
             'type' => 'bug',
             'status' => 'review',
             'priority' => 'urgent',
+            'severity' => 'critical',
+            'environment' => 'Chrome on Windows staging',
+            'steps_to_reproduce' => 'Open the page.',
+            'expected_result' => 'The page loads.',
+            'actual_result' => 'The page crashes.',
         ]);
 
         $response->assertRedirect(route('projects.issues.show', [$project, $issue]));

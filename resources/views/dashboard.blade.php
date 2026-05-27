@@ -12,6 +12,7 @@
         'epic' => ['label' => 'Epics', 'tone' => 'bg-purple-50 text-purple-700 border-purple-200'],
         'story' => ['label' => 'Stories', 'tone' => 'bg-sky-50 text-sky-700 border-sky-200'],
         'task' => ['label' => 'Tasks', 'tone' => 'bg-emerald-50 text-emerald-700 border-emerald-200'],
+        'subtask' => ['label' => 'Subtasks', 'tone' => 'bg-amber-50 text-amber-700 border-amber-200'],
         'bug' => ['label' => 'Bugs', 'tone' => 'bg-rose-50 text-rose-700 border-rose-200'],
     ];
 
@@ -19,6 +20,7 @@
         'epic' => 'bg-purple-100 text-purple-700',
         'story' => 'bg-sky-100 text-sky-700',
         'task' => 'bg-emerald-100 text-emerald-700',
+        'subtask' => 'bg-amber-100 text-amber-700',
         'bug' => 'bg-rose-100 text-rose-700',
     ];
 @endphp

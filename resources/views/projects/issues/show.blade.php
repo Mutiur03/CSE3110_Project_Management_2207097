@@ -1,3 +1,30 @@
+@php
+    $typeTones = [
+        'epic' => 'text-purple-600',
+        'story' => 'text-sky-600',
+        'task' => 'text-emerald-600',
+        'subtask' => 'text-blue-600',
+        'bug' => 'text-rose-600',
+    ];
+
+    $priorityTones = [
+        'low' => 'text-neutral-500',
+        'medium' => 'text-amber-600',
+        'high' => 'text-orange-600',
+        'urgent' => 'text-rose-600',
+    ];
+
+    $statusLabels = [
+        'backlog' => 'Backlog',
+        'selected' => 'Selected',
+        'in_progress' => 'In Progress',
+        'review' => 'Review',
+        'done' => 'Done',
+    ];
+
+    $canHaveChildren = in_array($issue->type, ['epic', 'story', 'task'], true);
+@endphp
+
 <x-dashboard.layout title="{{ $issue->key }}" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
     <div class="grid gap-6 xl:grid-cols-[1fr_22rem]">
         <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
@@ -63,6 +90,57 @@
                     <p class="mt-2 whitespace-pre-line text-sm leading-6 text-neutral-600">{{ $issue->actual_result ?: 'No actual result added.' }}</p>
                 </div>
             </div>
+        </section>
+    @endif
+
+    @if ($canHaveChildren)
+        <section class="mt-6 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
+            <div class="flex items-center justify-between gap-3 border-b border-neutral-200 px-5 py-4">
+                <div>
+                    <h3 class="text-sm font-bold text-neutral-950">Child issues</h3>
+                    <p class="mt-1 text-xs text-neutral-500">{{ $issue->childIssues->count() }} linked under {{ $issue->key }}</p>
+                </div>
+            </div>
+
+            @if ($issue->childIssues->isEmpty())
+                <div class="p-5 text-sm text-neutral-500">No child issues yet.</div>
+            @else
+                <div class="overflow-x-auto">
+                    <div class="min-w-[860px]">
+                        <div class="grid grid-cols-[minmax(24rem,1fr)_13rem_13rem_9rem_8rem] border-b border-neutral-200 bg-stone-50 text-xs font-bold text-neutral-500">
+                            <span class="border-r border-neutral-200 px-3 py-3">Work</span>
+                            <span class="border-r border-neutral-200 px-3 py-3">Assignee</span>
+                            <span class="border-r border-neutral-200 px-3 py-3">Reporter</span>
+                            <span class="border-r border-neutral-200 px-3 py-3">Priority</span>
+                            <span class="px-3 py-3">Status</span>
+                        </div>
+
+                        @foreach ($issue->childIssues as $childIssue)
+                            <div>
+                                @include('projects.issues.partials.backlog-row', [
+                                    'issue' => $childIssue,
+                                    'currentProject' => $currentProject,
+                                    'typeTones' => $typeTones,
+                                    'priorityTones' => $priorityTones,
+                                    'statusLabels' => $statusLabels,
+                                    'indent' => 0,
+                                ])
+
+                                @foreach ($childIssue->childIssues as $grandchildIssue)
+                                    @include('projects.issues.partials.backlog-row', [
+                                        'issue' => $grandchildIssue,
+                                        'currentProject' => $currentProject,
+                                        'typeTones' => $typeTones,
+                                        'priorityTones' => $priorityTones,
+                                        'statusLabels' => $statusLabels,
+                                        'indent' => 1,
+                                    ])
+                                @endforeach
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </section>
     @endif
 

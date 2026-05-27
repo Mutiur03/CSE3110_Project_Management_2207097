@@ -63,6 +63,11 @@ class Issue extends Model
         return $this->belongsTo(Issue::class, 'parent_issue_id');
     }
 
+    public function childIssues(): HasMany
+    {
+        return $this->hasMany(Issue::class, 'parent_issue_id');
+    }
+
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);

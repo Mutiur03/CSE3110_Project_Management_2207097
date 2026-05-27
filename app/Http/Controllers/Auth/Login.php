@@ -14,7 +14,7 @@ class Login extends Controller
     public function create(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect('/')->with('status', 'You are already logged in.');
+            return redirect()->route('dashboard')->with('status', 'You are already logged in.');
         } else {
             return view('login');
         }

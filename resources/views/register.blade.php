@@ -9,7 +9,7 @@
                 class="grid w-full overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm lg:min-h-190 lg:grid-cols-[1fr_0.95fr]">
                 <section class="flex items-center justify-center p-5 sm:p-8 lg:order-1 lg:p-10">
                     <div class="w-full max-w-md">
-                        <a href="{{ url('/') }}"
+                        <a href="{{ url('/') }}" wire:navigate
                             class="mb-10 flex w-fit items-center gap-3 font-semibold tracking-tight text-neutral-950 lg:hidden">
                             <img src="{{ asset('scrumlab-icon.svg') }}" alt="" class="size-10 shrink-0">
                             <span>{{ config('app.name') }}</span>
@@ -162,7 +162,7 @@
 
                         <p class="mt-8 text-center text-sm text-neutral-500">
                             Already have an account?
-                            <a href="{{ route('login') }}"
+                            <a href="{{ route('login') }}" wire:navigate
                                 class="font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4 transition hover:decoration-neutral-950">Log
                                 in</a>
                         </p>
@@ -171,7 +171,7 @@
 
                 <section
                     class="order-first hidden flex-col gap-8 border-b border-neutral-200 bg-stone-100 p-5 sm:p-8 lg:order-0 lg:flex lg:border-b-0 lg:border-r lg:p-10">
-                    <a href="{{ url('/') }}"
+                    <a href="{{ url('/') }}" wire:navigate
                         class="hidden w-fit items-center gap-3 font-semibold tracking-tight text-neutral-950 lg:flex">
                         <img src="{{ asset('scrumlab-icon.svg') }}" alt="" class="size-10 shrink-0">
                         <span>{{ config('app.name') }}</span>
