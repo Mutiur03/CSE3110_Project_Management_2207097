@@ -28,10 +28,10 @@
                     Backlog is the project issue list. Team and assignee are optional, so work can start before teams are formed.
                 </p>
             </div>
-            <button type="button" data-modal-target="create-issue-modal"
+            {{-- <button type="button" data-modal-target="create-issue-modal"
                 class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                 Create issue
-            </button>
+            </button> --}}
         </div>
     </section>
 
@@ -47,6 +47,7 @@
                 'submitLabel' => 'Create issue',
                 'cancelUrl' => route('projects.issues.index', $currentProject),
                 'modalCancel' => true,
+                'fieldPrefix' => 'page-create-issue',
             ])
         </form>
     </x-dashboard.modal>

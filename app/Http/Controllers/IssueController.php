@@ -107,7 +107,21 @@ class IssueController extends Controller
         $this->assertIssueBelongsToProject($issue, $project);
 
         $validated = $this->validateIssue($request, $project, $issue);
-        $oldValues = $issue->only(['title', 'type', 'status', 'priority', 'assignee_id', 'team_id', 'story_points']);
+        $trackedFields = [
+            'title',
+            'type',
+            'status',
+            'priority',
+            'assignee_id',
+            'team_id',
+            'story_points',
+            'severity',
+            'steps_to_reproduce',
+            'expected_result',
+            'actual_result',
+            'environment',
+        ];
+        $oldValues = $issue->only($trackedFields);
 
         $issue->update([
             ...$validated,
@@ -125,7 +139,7 @@ class IssueController extends Controller
             'subject_type' => Issue::class,
             'subject_id' => $issue->id,
             'old_values' => $oldValues,
-            'new_values' => $issue->only(['title', 'type', 'status', 'priority', 'assignee_id', 'team_id', 'story_points']),
+            'new_values' => $issue->only($trackedFields),
         ]);
 
         return redirect()
@@ -142,6 +156,11 @@ class IssueController extends Controller
             'status' => ['required', Rule::in(['backlog', 'selected', 'in_progress', 'review', 'done'])],
             'priority' => ['required', Rule::in(['low', 'medium', 'high', 'urgent'])],
             'story_points' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'severity' => ['nullable', Rule::in(['minor', 'major', 'critical', 'blocker'])],
+            'steps_to_reproduce' => ['nullable', 'string', 'max:4000'],
+            'expected_result' => ['nullable', 'string', 'max:2000'],
+            'actual_result' => ['nullable', 'string', 'max:2000'],
+            'environment' => ['nullable', 'string', 'max:180'],
             'assignee_id' => [
                 'nullable',
                 Rule::exists('project_members', 'user_id')->where('project_id', $project->id),
@@ -161,6 +180,37 @@ class IssueController extends Controller
     private function validateIssue(Request $request, Project $project, ?Issue $issue = null): array
     {
         $validated = $request->validate($this->rules($project, $issue));
+
+        if (in_array($validated['type'], ['epic', 'bug'], true)) {
+            $validated['parent_issue_id'] = null;
+            $validated['story_points'] = null;
+        }
+
+        if ($validated['type'] !== 'bug') {
+            $validated['severity'] = null;
+            $validated['steps_to_reproduce'] = null;
+            $validated['expected_result'] = null;
+            $validated['actual_result'] = null;
+            $validated['environment'] = null;
+        }
+
+        if (! empty($validated['parent_issue_id'])) {
+            $parentIssue = Issue::query()
+                ->where('project_id', $project->id)
+                ->findOrFail($validated['parent_issue_id']);
+
+            if ($validated['type'] === 'story' && $parentIssue->type !== 'epic') {
+                throw ValidationException::withMessages([
+                    'parent_issue_id' => 'A story can only be linked under an epic.',
+                ]);
+            }
+
+            if ($validated['type'] === 'task' && ! in_array($parentIssue->type, ['epic', 'story'], true)) {
+                throw ValidationException::withMessages([
+                    'parent_issue_id' => 'A task can only be linked under an epic or story.',
+                ]);
+            }
+        }
 
         if (
             ! empty($validated['team_id'])

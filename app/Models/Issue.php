@@ -26,6 +26,11 @@ class Issue extends Model
         'status',
         'priority',
         'story_points',
+        'severity',
+        'steps_to_reproduce',
+        'expected_result',
+        'actual_result',
+        'environment',
     ];
 
     public function project(): BelongsTo

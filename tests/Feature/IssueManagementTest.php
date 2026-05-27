@@ -93,6 +93,162 @@ class IssueManagementTest extends TestCase
         $this->assertSame($team->id, $issue->team_id);
     }
 
+    public function test_story_can_be_created_under_epic(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $epic = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'User management',
+            'type' => 'epic',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Register account',
+            'type' => 'story',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'parent_issue_id' => $epic->id,
+            'story_points' => 5,
+        ]);
+
+        $issue = Issue::where('key', 'CP-2')->firstOrFail();
+
+        $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
+        $this->assertSame($epic->id, $issue->parent_issue_id);
+        $this->assertSame(5, $issue->story_points);
+    }
+
+    public function test_task_can_be_created_under_story(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $story = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Register account',
+            'type' => 'story',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Build registration form',
+            'type' => 'task',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'parent_issue_id' => $story->id,
+            'story_points' => 3,
+        ]);
+
+        $issue = Issue::where('key', 'CP-2')->firstOrFail();
+
+        $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
+        $this->assertSame($story->id, $issue->parent_issue_id);
+        $this->assertSame(3, $issue->story_points);
+    }
+
+    public function test_story_cannot_be_created_under_story(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $story = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Register account',
+            'type' => 'story',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Nested story',
+            'type' => 'story',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'parent_issue_id' => $story->id,
+        ]);
+
+        $response->assertSessionHasErrors('parent_issue_id');
+        $this->assertDatabaseMissing('issues', [
+            'project_id' => $project->id,
+            'title' => 'Nested story',
+        ]);
+    }
+
+    public function test_bug_clears_parent_and_story_points(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $epic = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'User management',
+            'type' => 'epic',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Fix password reset error',
+            'type' => 'bug',
+            'status' => 'backlog',
+            'priority' => 'high',
+            'parent_issue_id' => $epic->id,
+            'story_points' => 8,
+        ]);
+
+        $issue = Issue::where('key', 'CP-2')->firstOrFail();
+
+        $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
+        $this->assertNull($issue->parent_issue_id);
+        $this->assertNull($issue->story_points);
+    }
+
+    public function test_user_can_create_bug_with_bug_report_details(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Password reset crashes',
+            'description' => 'Reset page fails for valid users.',
+            'type' => 'bug',
+            'status' => 'backlog',
+            'priority' => 'urgent',
+            'severity' => 'critical',
+            'environment' => 'Chrome on Windows staging',
+            'steps_to_reproduce' => "Open login\nClick forgot password\nSubmit valid email",
+            'expected_result' => 'Password reset email is sent.',
+            'actual_result' => 'A server error appears.',
+        ]);
+
+        $issue = Issue::where('key', 'CP-1')->firstOrFail();
+
+        $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
+        $this->assertDatabaseHas('issues', [
+            'id' => $issue->id,
+            'type' => 'bug',
+            'severity' => 'critical',
+            'environment' => 'Chrome on Windows staging',
+            'expected_result' => 'Password reset email is sent.',
+            'actual_result' => 'A server error appears.',
+        ]);
+    }
+
+    public function test_non_bug_issue_clears_bug_report_details(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Build registration form',
+            'type' => 'task',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'story_points' => 3,
+            'severity' => 'critical',
+            'environment' => 'Chrome on Windows staging',
+            'steps_to_reproduce' => 'Open the form.',
+            'expected_result' => 'The form works.',
+            'actual_result' => 'The form fails.',
+        ]);
+
+        $issue = Issue::where('key', 'CP-1')->firstOrFail();
+
+        $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
+        $this->assertNull($issue->severity);
+        $this->assertNull($issue->environment);
+        $this->assertNull($issue->steps_to_reproduce);
+        $this->assertNull($issue->expected_result);
+        $this->assertNull($issue->actual_result);
+    }
+
     public function test_user_cannot_assign_issue_to_member_outside_selected_team(): void
     {
         [$owner, $project] = $this->createProjectWithOwner();
@@ -202,6 +358,20 @@ class IssueManagementTest extends TestCase
             'joined_at' => now(),
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+    }
+
+    private function createIssue(Project $project, User $reporter, array $overrides = []): Issue
+    {
+        return Issue::create([
+            'project_id' => $project->id,
+            'reporter_id' => $reporter->id,
+            'key' => 'CP-1',
+            'title' => 'Build backlog workflow',
+            'type' => 'task',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            ...$overrides,
         ]);
     }
 }

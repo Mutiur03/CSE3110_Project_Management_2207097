@@ -19,6 +19,7 @@
                 'parentIssues' => $parentIssues,
                 'submitLabel' => 'Create issue',
                 'cancelUrl' => route('projects.issues.index', $currentProject),
+                'fieldPrefix' => 'create-issue',
             ])
         </form>
     </div>

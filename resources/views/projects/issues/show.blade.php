@@ -28,9 +28,43 @@
                     <dt class="text-neutral-500">Team</dt>
                     <dd class="font-semibold text-neutral-950">{{ $issue->team?->name ?? 'No team' }}</dd>
                 </div>
+                @if ($issue->type === 'bug')
+                    <div class="flex justify-between gap-3">
+                        <dt class="text-neutral-500">Severity</dt>
+                        <dd class="font-semibold text-neutral-950">{{ ucfirst($issue->severity ?? 'major') }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-3">
+                        <dt class="text-neutral-500">Environment</dt>
+                        <dd class="font-semibold text-neutral-950">{{ $issue->environment ?: 'Not specified' }}</dd>
+                    </div>
+                @endif
             </dl>
         </aside>
     </div>
+
+    @if ($issue->type === 'bug')
+        <section class="mt-6 rounded-lg border border-rose-100 bg-white p-5 shadow-sm">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-md bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700">Bug report</span>
+                <span class="rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-700">{{ ucfirst($issue->severity ?? 'major') }}</span>
+            </div>
+
+            <div class="mt-5 grid gap-5 lg:grid-cols-3">
+                <div>
+                    <h3 class="text-sm font-bold text-neutral-950">Steps to reproduce</h3>
+                    <p class="mt-2 whitespace-pre-line text-sm leading-6 text-neutral-600">{{ $issue->steps_to_reproduce ?: 'No steps added.' }}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-neutral-950">Expected result</h3>
+                    <p class="mt-2 whitespace-pre-line text-sm leading-6 text-neutral-600">{{ $issue->expected_result ?: 'No expected result added.' }}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-neutral-950">Actual result</h3>
+                    <p class="mt-2 whitespace-pre-line text-sm leading-6 text-neutral-600">{{ $issue->actual_result ?: 'No actual result added.' }}</p>
+                </div>
+            </div>
+        </section>
+    @endif
 
     <form method="POST" action="{{ route('projects.issues.update', [$currentProject, $issue]) }}"
         class="mt-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
@@ -44,6 +78,7 @@
             'parentIssues' => $parentIssues,
             'submitLabel' => 'Save issue',
             'cancelUrl' => route('projects.issues.index', $currentProject),
+            'fieldPrefix' => 'edit-issue',
         ])
     </form>
 </x-dashboard.layout>

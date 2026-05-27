@@ -5,6 +5,21 @@
     'projects' => collect(),
 ])
 
+@php
+    $globalIssueMembers = $currentProject
+        ? $currentProject->members()
+            ->with(['teams' => fn ($query) => $query->where('project_id', $currentProject->id)])
+            ->orderBy('name')
+            ->get()
+        : collect();
+    $globalIssueTeams = $currentProject
+        ? $currentProject->teams()->orderBy('name')->get()
+        : collect();
+    $globalParentIssues = $currentProject
+        ? $currentProject->issues()->whereIn('type', ['epic', 'story'])->orderBy('key')->get()
+        : collect();
+@endphp
+
 <x-layout>
     <x-slot:title>
         {{ $title }}
@@ -45,14 +60,25 @@
                                 <input type="search" placeholder="Search projects, teams, issues"
                                     class="w-full rounded-md border border-neutral-200 bg-stone-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                             </label>
-                            <a href="{{ route('projects.create') }}" wire:navigate
-                                class="inline-flex shrink-0 items-center gap-2 rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
-                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
-                                </svg>
-                                Create
-                            </a>
+                            @if ($currentProject)
+                                <button type="button" data-modal-target="global-create-issue-modal"
+                                    class="inline-flex shrink-0 items-center gap-2 rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    Create
+                                </button>
+                            @else
+                                <a href="{{ route('projects.create') }}" wire:navigate
+                                    class="inline-flex shrink-0 items-center gap-2 rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    Create
+                                </a>
+                            @endif
                         </div>
 
                         <div class="hidden lg:block"></div>
@@ -64,6 +90,26 @@
                 </section>
             </div>
         </div>
+
+        @if ($currentProject)
+            <x-dashboard.modal id="global-create-issue-modal" title="Create backlog item" :open="old('_form') === 'global-create-issue'">
+                <form method="POST" action="{{ route('projects.issues.store', $currentProject) }}">
+                    @csrf
+                    <input type="hidden" name="_form" value="global-create-issue">
+
+                    @include('projects.issues.partials.form', [
+                        'issue' => null,
+                        'members' => $globalIssueMembers,
+                        'teams' => $globalIssueTeams,
+                        'parentIssues' => $globalParentIssues,
+                        'submitLabel' => 'Create backlog item',
+                        'cancelUrl' => route('projects.issues.index', $currentProject),
+                        'modalCancel' => true,
+                        'fieldPrefix' => 'global-issue',
+                    ])
+                </form>
+            </x-dashboard.modal>
+        @endif
     </main>
 
     <script>
@@ -88,15 +134,19 @@
                     const type = form.querySelector('[data-issue-type]')?.value;
                     const teamId = form.querySelector('[data-issue-team]')?.value;
                     const assigneeInput = form.querySelector('[data-issue-assignee]');
+                    const parentSelect = form.querySelector('[data-issue-parent]');
                     const parentField = form.querySelector('[data-issue-parent-field]');
                     const pointsField = form.querySelector('[data-issue-points-field]');
+                    const bugField = form.querySelector('[data-issue-bug-field]');
                     const parentInput = parentField?.querySelector('select, input, textarea');
                     const pointsInput = pointsField?.querySelector('select, input, textarea');
                     const showParent = type === 'story' || type === 'task';
                     const showPoints = type === 'story' || type === 'task';
+                    const showBugFields = type === 'bug';
 
                     parentField?.classList.toggle('hidden', ! showParent);
                     pointsField?.classList.toggle('hidden', ! showPoints);
+                    bugField?.classList.toggle('hidden', ! showBugFields);
 
                     if (parentInput) {
                         parentInput.disabled = ! showParent;
@@ -104,6 +154,40 @@
 
                     if (pointsInput) {
                         pointsInput.disabled = ! showPoints;
+                    }
+
+                    bugField?.querySelectorAll('select, input, textarea').forEach(input => {
+                        input.disabled = ! showBugFields;
+                    });
+
+                    if (parentSelect) {
+                        let selectedParentIsAvailable = ! parentSelect.value;
+
+                        parentSelect.querySelectorAll('option').forEach(option => {
+                            if (! option.value) {
+                                option.hidden = false;
+                                option.disabled = false;
+                                return;
+                            }
+
+                            const parentType = option.dataset.parentType;
+                            const isAvailable = type === 'story'
+                                ? parentType === 'epic'
+                                : type === 'task'
+                                    ? parentType === 'epic' || parentType === 'story'
+                                    : false;
+
+                            option.hidden = ! isAvailable;
+                            option.disabled = ! isAvailable;
+
+                            if (option.selected && isAvailable) {
+                                selectedParentIsAvailable = true;
+                            }
+                        });
+
+                        if (! selectedParentIsAvailable) {
+                            parentSelect.value = '';
+                        }
                     }
 
                     if (assigneeInput) {

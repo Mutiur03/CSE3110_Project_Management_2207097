@@ -69,5 +69,10 @@ class DashboardTest extends TestCase
         $response->assertSee('Teams in this project');
         $response->assertSee('Active sprint');
         $response->assertSee('Build project dashboard');
+        $response->assertSee('Create backlog item');
+        $response->assertSee('Epic');
+        $response->assertSee('Story');
+        $response->assertSee('Task');
+        $response->assertSee('Bug');
     }
 }
