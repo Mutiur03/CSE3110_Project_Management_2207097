@@ -171,7 +171,18 @@ class SprintController extends Controller
         $this->authorizeProjectAccess($request, $project);
         $this->assertSprintBelongsToProject($sprint, $project);
 
-        $project->sprints()->where('status', 'active')->update(['status' => 'planned']);
+        $activeSprint = $project->sprints()
+            ->where('status', 'active')
+            ->whereKeyNot($sprint->id)
+            ->first();
+
+        if ($activeSprint && ! $request->boolean('confirm_replace_active')) {
+            return back()->withErrors([
+                'sprint' => "Confirm before starting {$sprint->name}. {$activeSprint->name} is already active and will move back to planned.",
+            ]);
+        }
+
+        $project->sprints()->where('status', 'active')->whereKeyNot($sprint->id)->update(['status' => 'planned']);
         $sprint->update(['status' => 'active']);
 
         ActivityLog::create([

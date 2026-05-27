@@ -11,6 +11,8 @@
         'task' => 'bg-emerald-100 text-emerald-700',
         'bug' => 'bg-rose-100 text-rose-700',
     ];
+
+    $activeSprint = $sprints->firstWhere('status', 'active');
 @endphp
 
 <x-dashboard.layout title="Sprints" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -45,6 +47,10 @@
             <p class="mt-2 text-sm leading-6 text-neutral-600">Sprints pull selected backlog issues into a focused work cycle.</p>
         </aside>
     </div>
+
+    @error('sprint')
+        <p class="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ $message }}</p>
+    @enderror
 
     <x-dashboard.modal id="create-sprint-modal" title="Create sprint">
         <form method="POST" action="{{ route('projects.sprints.store', $currentProject) }}" class="space-y-4">
@@ -111,8 +117,14 @@
                         </button>
 
                         @if ($sprint->status !== 'active')
-                            <form method="POST" action="{{ route('projects.sprints.start', [$currentProject, $sprint]) }}">
+                            <form method="POST" action="{{ route('projects.sprints.start', [$currentProject, $sprint]) }}"
+                                @if ($activeSprint)
+                                    onsubmit="return confirm(@js($activeSprint->name . ' is already active. Starting ' . $sprint->name . ' will move ' . $activeSprint->name . ' back to planned. Continue?'))"
+                                @endif>
                                 @csrf
+                                @if ($activeSprint)
+                                    <input type="hidden" name="confirm_replace_active" value="1">
+                                @endif
                                 <button type="submit"
                                     class="rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
                                     Start

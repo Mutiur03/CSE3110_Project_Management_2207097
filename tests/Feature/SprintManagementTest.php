@@ -144,7 +144,9 @@ class SprintManagementTest extends TestCase
             'status' => 'planned',
         ]);
 
-        $response = $this->actingAs($owner)->post(route('projects.sprints.start', [$project, $plannedSprint]));
+        $response = $this->actingAs($owner)->post(route('projects.sprints.start', [$project, $plannedSprint]), [
+            'confirm_replace_active' => '1',
+        ]);
 
         $response->assertRedirect(route('projects.sprints.index', $project));
         $this->assertDatabaseHas('sprints', [
@@ -153,6 +155,33 @@ class SprintManagementTest extends TestCase
         ]);
         $this->assertDatabaseHas('sprints', [
             'id' => $activeSprint->id,
+            'status' => 'planned',
+        ]);
+    }
+
+    public function test_starting_another_sprint_requires_confirmation_when_one_is_active(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $activeSprint = Sprint::create([
+            'project_id' => $project->id,
+            'name' => 'Sprint 1',
+            'status' => 'active',
+        ]);
+        $plannedSprint = Sprint::create([
+            'project_id' => $project->id,
+            'name' => 'Sprint 2',
+            'status' => 'planned',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.sprints.start', [$project, $plannedSprint]));
+
+        $response->assertSessionHasErrors('sprint');
+        $this->assertDatabaseHas('sprints', [
+            'id' => $activeSprint->id,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('sprints', [
+            'id' => $plannedSprint->id,
             'status' => 'planned',
         ]);
     }
