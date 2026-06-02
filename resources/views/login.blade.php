@@ -80,6 +80,12 @@
                             </div>
                         @endif
 
+                        @if (session('status'))
+                            <div class="mb-6 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                                {{ session('status') }}
+                            </div>
+                        @endif
+
                         <form action="{{ route('login.store') }}" method="POST" class="space-y-5">
                             @csrf
 
@@ -145,7 +151,7 @@
                                     Remember me
                                 </label>
 
-                                <a href="#"
+                                <a href="{{ route('password.request') }}" wire:navigate
                                     class="font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4 transition hover:decoration-neutral-950">Forgot
                                     password?</a>
                             </div>

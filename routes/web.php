@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Auth\RegisteredUser;
 use App\Http\Controllers\Auth\Login;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\BoardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IssueController;
@@ -11,14 +13,18 @@ use App\Http\Controllers\SprintController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('home');
-})->middleware('no_back_history');
+Route::view('/', 'home')->middleware('no_back_history');
 Route::get('/login', [Login::class, 'create'])->middleware('no_back_history')->name('login');
 Route::post('/login', [Login::class, 'store'])->name('login.store');
 Route::post('/logout', [Login::class, 'destroy'])->middleware('auth')->name('logout');
 Route::get('/register', [RegisteredUser::class, 'create'])->middleware('no_back_history')->name('register');
 Route::post('/register', [RegisteredUser::class, 'store'])->name('register.store');
+Route::middleware('guest')->group(function () {
+    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
+    Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.update');
+});
 
 Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'no_back_history'])->name('dashboard');
 Route::middleware(['auth', 'no_back_history'])->group(function () {
