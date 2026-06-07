@@ -335,14 +335,14 @@ class IssueController extends Controller
     {
         $issue->loadMissing('assignee');
 
-        if ($issue->assignee && ! $issue->assignee->is($request->user())) {
-            $issue->assignee->notify(new ProjectEventNotification(
+        if ($issue->assignee) {
+            (new ProjectEventNotification(
                 $title,
                 $message,
                 route('projects.issues.show', [$project, $issue]),
                 $project->id,
                 $issue->id,
-            ));
+            ))->sendTo($issue->assignee);
         }
     }
 
@@ -353,13 +353,12 @@ class IssueController extends Controller
         collect([$issue->reporter, $issue->assignee])
             ->filter()
             ->unique('id')
-            ->reject(fn ($user) => $user->is($request->user()))
-            ->each(fn ($user) => $user->notify(new ProjectEventNotification(
+            ->each(fn ($user) => (new ProjectEventNotification(
                 $title,
                 $message,
                 route('projects.issues.show', [$project, $issue]),
                 $project->id,
                 $issue->id,
-            )));
+            ))->sendTo($user));
     }
 }

@@ -31,6 +31,7 @@ Route::middleware('guest')->group(function () {
 
 Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'no_back_history'])->name('dashboard');
 Route::middleware(['auth', 'no_back_history'])->group(function () {
+    Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
     Route::post('/notifications/read', [NotificationController::class, 'markAllRead'])->name('notifications.read');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');

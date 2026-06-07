@@ -82,14 +82,13 @@ class BoardController extends Controller
         collect([$issue->reporter, $issue->assignee])
             ->filter()
             ->unique('id')
-            ->reject(fn ($user) => $user->is($request->user()))
-            ->each(fn ($user) => $user->notify(new ProjectEventNotification(
+            ->each(fn ($user) => (new ProjectEventNotification(
                 'Issue status changed',
                 "{$issue->key} moved from {$oldStatus} to {$issue->status}.",
                 route('projects.issues.show', [$project, $issue]),
                 $project->id,
                 $issue->id,
-            )));
+            ))->sendTo($user));
 
         return redirect()
             ->route('projects.board.index', $project)

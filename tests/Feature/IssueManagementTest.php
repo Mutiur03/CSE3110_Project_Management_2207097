@@ -98,6 +98,48 @@ class IssueManagementTest extends TestCase
         ]);
     }
 
+    public function test_issue_assignment_notification_is_stored_for_assignee(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $member = User::factory()->create();
+        $this->addProjectMember($project, $member);
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Notify assigned developer',
+            'type' => 'task',
+            'status' => 'selected',
+            'priority' => 'medium',
+            'assignee_id' => $member->id,
+            'story_points' => 3,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $member->fresh()->unreadNotifications()->count());
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $member->id,
+            'notifiable_type' => User::class,
+        ]);
+    }
+
+    public function test_issue_assignment_notifies_actor_when_assigning_to_self(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.store', $project), [
+            'title' => 'Self assigned task',
+            'type' => 'task',
+            'status' => 'selected',
+            'priority' => 'medium',
+            'assignee_id' => $owner->id,
+            'story_points' => 3,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $owner->fresh()->unreadNotifications()->count());
+    }
+
     public function test_story_can_be_created_under_epic(): void
     {
         [$owner, $project] = $this->createProjectWithOwner();

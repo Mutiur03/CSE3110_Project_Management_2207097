@@ -42,16 +42,15 @@ class CommentController extends Controller
 
         $recipients = collect([$issue->reporter, $issue->assignee])
             ->filter()
-            ->unique('id')
-            ->reject(fn ($user) => $user->is($request->user()));
+            ->unique('id');
 
-        $recipients->each(fn ($user) => $user->notify(new ProjectEventNotification(
+        $recipients->each(fn ($user) => (new ProjectEventNotification(
             'New comment',
             "{$request->user()->name} commented on {$issue->key}.",
             route('projects.issues.show', [$project, $issue]),
             $project->id,
             $issue->id,
-        )));
+        ))->sendTo($user));
 
         return redirect()
             ->route('projects.issues.show', [$project, $issue])

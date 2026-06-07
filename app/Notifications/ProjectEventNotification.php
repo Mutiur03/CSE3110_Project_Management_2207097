@@ -2,8 +2,10 @@
 
 namespace App\Notifications;
 
+use App\Events\ProjectNotificationPushed;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use Throwable;
 
 class ProjectEventNotification extends Notification
 {
@@ -24,6 +26,22 @@ class ProjectEventNotification extends Notification
     }
 
     public function toDatabase(object $notifiable): array
+    {
+        return $this->payload();
+    }
+
+    public function sendTo(object $notifiable): void
+    {
+        $notifiable->notify($this);
+
+        try {
+            event(new ProjectNotificationPushed((string) $notifiable->getKey()));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    private function payload(): array
     {
         return [
             'title' => $this->title,

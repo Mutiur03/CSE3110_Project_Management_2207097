@@ -285,12 +285,11 @@ class SprintController extends Controller
         $project->members()
             ->get()
             ->unique('id')
-            ->reject(fn ($user) => $user->is($request->user()))
-            ->each(fn ($user) => $user->notify(new ProjectEventNotification(
+            ->each(fn ($user) => (new ProjectEventNotification(
                 $title,
                 $message,
                 $url,
                 $project->id,
-            )));
+            ))->sendTo($user));
     }
 }
