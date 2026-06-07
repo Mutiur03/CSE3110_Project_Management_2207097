@@ -92,6 +92,10 @@ class IssueManagementTest extends TestCase
         $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
         $this->assertSame($member->id, $issue->assignee_id);
         $this->assertSame($team->id, $issue->team_id);
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $member->id,
+            'notifiable_type' => User::class,
+        ]);
     }
 
     public function test_story_can_be_created_under_epic(): void
@@ -478,6 +482,96 @@ class IssueManagementTest extends TestCase
             'issue_id' => $issue->id,
             'action' => 'updated issue',
         ]);
+    }
+
+    public function test_user_can_filter_project_issues(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $member = User::factory()->create(['name' => 'Assigned Developer']);
+        $this->addProjectMember($project, $member);
+        $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Fix login failure',
+            'type' => 'bug',
+            'status' => 'review',
+            'priority' => 'urgent',
+            'assignee_id' => $member->id,
+            'severity' => 'critical',
+        ]);
+        $this->createIssue($project, $owner, [
+            'key' => 'CP-2',
+            'title' => 'Build profile page',
+            'type' => 'task',
+            'status' => 'backlog',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('projects.issues.index', [
+            'project' => $project,
+            'q' => 'login',
+            'type' => 'bug',
+            'status' => 'review',
+            'priority' => 'urgent',
+            'assignee_id' => $member->id,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Fix login failure');
+        $response->assertSee('value="bug" selected', false);
+        $response->assertSee('value="review" selected', false);
+    }
+
+    public function test_user_can_comment_on_issue_and_see_activity(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $issue = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Build comment thread',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.issues.comments.store', [$project, $issue]), [
+            'body' => 'Please test this before moving to Done.',
+        ]);
+
+        $response->assertRedirect(route('projects.issues.show', [$project, $issue]));
+        $this->assertDatabaseHas('comments', [
+            'issue_id' => $issue->id,
+            'user_id' => $owner->id,
+            'body' => 'Please test this before moving to Done.',
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'project_id' => $project->id,
+            'issue_id' => $issue->id,
+            'action' => 'commented on issue',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('projects.issues.show', [$project, $issue]))
+            ->assertOk()
+            ->assertSee('Comments')
+            ->assertSee('Please test this before moving to Done.')
+            ->assertSee('Issue activity')
+            ->assertSee('commented on issue');
+    }
+
+    public function test_project_activity_page_shows_recent_changes(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $issue = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Track project history',
+        ]);
+
+        $this->actingAs($owner)->post(route('projects.issues.comments.store', [$project, $issue]), [
+            'body' => 'This should appear in project activity.',
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('projects.activity.index', $project));
+
+        $response->assertOk();
+        $response->assertSee('Activity timeline');
+        $response->assertSee('commented on issue');
+        $response->assertSee('CP-1');
     }
 
     public function test_user_cannot_view_issues_for_project_they_do_not_belong_to(): void

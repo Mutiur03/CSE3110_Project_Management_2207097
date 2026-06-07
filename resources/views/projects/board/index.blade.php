@@ -6,6 +6,13 @@
         'subtask' => 'bg-amber-100 text-amber-700',
         'bug' => 'bg-rose-100 text-rose-700',
     ];
+
+    $priorityTones = [
+        'low' => 'bg-neutral-100 text-neutral-600',
+        'medium' => 'bg-amber-100 text-amber-700',
+        'high' => 'bg-orange-100 text-orange-700',
+        'urgent' => 'bg-rose-100 text-rose-700',
+    ];
 @endphp
 
 <x-dashboard.layout title="Board" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -20,7 +27,7 @@
                 </div>
                 <h2 class="mt-3 text-2xl font-bold tracking-normal text-neutral-950">Active sprint board</h2>
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-                    Move active sprint issues through the workflow. Backlog items appear after they are selected into an active sprint.
+                    Drag cards between columns or use move buttons. Backlog items appear after they are selected into an active sprint.
                 </p>
             </div>
             <a href="{{ route('projects.sprints.index', $currentProject) }}" wire:navigate
@@ -37,26 +44,47 @@
     @else
         <div class="mt-6 grid gap-4 xl:grid-cols-4">
             @foreach ($columns as $column)
-                <section class="min-h-80 rounded-lg border border-neutral-200 bg-stone-50 p-4">
+                <section data-board-column="{{ $column['status'] }}" class="min-h-80 rounded-lg border border-neutral-200 bg-stone-50 p-4 transition">
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <h3 class="text-sm font-bold text-neutral-950">{{ $column['label'] }}</h3>
                         <span class="rounded bg-white px-2 py-1 text-xs font-bold text-neutral-500">{{ $column['issues']->count() }}</span>
                     </div>
 
-                    <div class="space-y-3">
+                    <div data-board-drop-zone class="min-h-56 space-y-3">
                         @forelse ($column['issues'] as $issue)
-                            <article class="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+                            <article draggable="true" data-board-card data-current-status="{{ $issue->status }}"
+                                class="cursor-grab rounded-lg border border-neutral-200 bg-white p-4 shadow-sm transition active:cursor-grabbing">
+                                <form method="POST" action="{{ route('projects.board.issues.status', [$currentProject, $issue]) }}" data-board-drop-form>
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ $issue->status }}" data-board-status-input>
+                                </form>
+
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-xs font-bold text-neutral-500">{{ $issue->key }}</span>
                                     <span class="rounded px-2 py-1 text-[10px] font-bold {{ $issueTypeTones[$issue->type] ?? 'bg-neutral-100 text-neutral-700' }}">
                                         {{ strtoupper($issue->type) }}
                                     </span>
                                 </div>
+
                                 <a href="{{ route('projects.issues.show', [$currentProject, $issue]) }}" wire:navigate
                                     class="mt-3 block text-sm font-bold leading-5 text-neutral-950 underline-offset-4 hover:underline">
                                     {{ $issue->title }}
                                 </a>
-                                <p class="mt-2 text-xs text-neutral-500">{{ $issue->assignee?->name ?? 'Unassigned' }} · {{ $issue->team?->name ?? 'No team' }}</p>
+
+                                <div class="mt-3 flex flex-wrap items-center gap-2">
+                                    <span class="rounded px-2 py-1 text-[10px] font-bold {{ $priorityTones[$issue->priority] ?? 'bg-neutral-100 text-neutral-600' }}">
+                                        {{ strtoupper($issue->priority) }}
+                                    </span>
+                                    @if ($issue->story_points)
+                                        <span class="rounded bg-neutral-100 px-2 py-1 text-[10px] font-bold text-neutral-600">{{ $issue->story_points }} pts</span>
+                                    @endif
+                                    @if ($issue->severity)
+                                        <span class="rounded bg-rose-100 px-2 py-1 text-[10px] font-bold text-rose-700">{{ strtoupper($issue->severity) }}</span>
+                                    @endif
+                                </div>
+
+                                <p class="mt-2 text-xs text-neutral-500">{{ $issue->assignee?->name ?? 'Unassigned' }} / {{ $issue->team?->name ?? 'No team' }}</p>
 
                                 <div class="mt-4 grid gap-2">
                                     @foreach ($workflow as $status => $label)

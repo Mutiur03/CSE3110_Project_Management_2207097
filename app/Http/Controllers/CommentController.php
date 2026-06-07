@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ActivityLog;
+use App\Models\Comment;
+use App\Models\Issue;
+use App\Models\Project;
+use App\Notifications\ProjectEventNotification;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+
+class CommentController extends Controller
+{
+    public function store(Request $request, Project $project, Issue $issue): RedirectResponse
+    {
+        $this->authorizeProjectAccess($request, $project);
+        $this->assertIssueBelongsToProject($issue, $project);
+
+        $validated = $request->validate([
+            'body' => ['required', 'string', 'max:4000'],
+        ]);
+
+        $comment = Comment::create([
+            'issue_id' => $issue->id,
+            'user_id' => $request->user()->id,
+            'body' => $validated['body'],
+        ]);
+
+        ActivityLog::create([
+            'project_id' => $project->id,
+            'issue_id' => $issue->id,
+            'user_id' => $request->user()->id,
+            'action' => 'commented on issue',
+            'subject_type' => Comment::class,
+            'subject_id' => $comment->id,
+            'new_values' => [
+                'issue' => $issue->key,
+                'comment' => str($comment->body)->limit(140)->toString(),
+            ],
+        ]);
+
+        $recipients = collect([$issue->reporter, $issue->assignee])
+            ->filter()
+            ->unique('id')
+            ->reject(fn ($user) => $user->is($request->user()));
+
+        $recipients->each(fn ($user) => $user->notify(new ProjectEventNotification(
+            'New comment',
+            "{$request->user()->name} commented on {$issue->key}.",
+            route('projects.issues.show', [$project, $issue]),
+            $project->id,
+            $issue->id,
+        )));
+
+        return redirect()
+            ->route('projects.issues.show', [$project, $issue])
+            ->with('status', 'Comment added.');
+    }
+
+    public function destroy(Request $request, Project $project, Issue $issue, Comment $comment): RedirectResponse
+    {
+        $this->authorizeProjectAccess($request, $project);
+        $this->assertIssueBelongsToProject($issue, $project);
+        abort_unless($comment->issue_id === $issue->id, 404);
+
+        $oldBody = $comment->body;
+        $comment->delete();
+
+        ActivityLog::create([
+            'project_id' => $project->id,
+            'issue_id' => $issue->id,
+            'user_id' => $request->user()->id,
+            'action' => 'deleted issue comment',
+            'subject_type' => Comment::class,
+            'subject_id' => $comment->id,
+            'old_values' => [
+                'issue' => $issue->key,
+                'comment' => str($oldBody)->limit(40)->toString(),
+            ],
+        ]);
+
+        return redirect()
+            ->route('projects.issues.show', [$project, $issue])
+            ->with('status', 'Comment deleted.');
+    }
+
+    private function authorizeProjectAccess(Request $request, Project $project): void
+    {
+        abort_unless(
+            $project->owner_id === $request->user()->id
+                || $project->members()->where('users.id', $request->user()->id)->exists(),
+            403
+        );
+    }
+
+    private function assertIssueBelongsToProject(Issue $issue, Project $project): void
+    {
+        abort_unless($issue->project_id === $project->id, 404);
+    }
+}

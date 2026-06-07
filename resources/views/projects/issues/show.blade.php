@@ -23,6 +23,7 @@
     ];
 
     $canHaveChildren = in_array($issue->type, ['epic', 'story', 'task'], true);
+    $activities = $issue->activityLogs->sortByDesc('created_at');
 @endphp
 
 <x-dashboard.layout title="{{ $issue->key }}" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -143,6 +144,91 @@
             @endif
         </section>
     @endif
+
+    <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_22rem]">
+        <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-bold text-neutral-950">Comments</h3>
+                    <p class="mt-1 text-xs text-neutral-500">{{ $issue->comments->count() }} discussion notes</p>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('projects.issues.comments.store', [$currentProject, $issue]) }}" class="mt-4">
+                @csrf
+                <label for="comment-body" class="sr-only">Add comment</label>
+                <textarea id="comment-body" name="body" rows="3" required placeholder="Add an update, question, or testing note..."
+                    class="w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">{{ old('body') }}</textarea>
+                @error('body')
+                    <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
+                @enderror
+                <div class="mt-3 flex justify-end">
+                    <button type="submit" class="rounded-md bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                        Comment
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-5 space-y-3">
+                @forelse ($issue->comments->sortByDesc('created_at') as $comment)
+                    @php
+                        $commentInitials = collect(explode(' ', $comment->user?->name ?? 'User'))
+                            ->filter()
+                            ->take(2)
+                            ->map(fn ($part) => substr($part, 0, 1))
+                            ->implode('');
+                    @endphp
+                    <article class="rounded-lg border border-neutral-200 bg-stone-50 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <span class="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-950 text-xs font-bold text-white">
+                                    {{ strtoupper($commentInitials ?: 'U') }}
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-bold text-neutral-950">{{ $comment->user?->name ?? 'Unknown user' }}</p>
+                                    <p class="text-xs font-semibold text-neutral-500">{{ $comment->created_at?->diffForHumans() }}</p>
+                                </div>
+                            </div>
+                            <form method="POST" action="{{ route('projects.issues.comments.destroy', [$currentProject, $issue, $comment]) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="rounded-md px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                        <p class="mt-3 whitespace-pre-line text-sm leading-6 text-neutral-700">{{ $comment->body }}</p>
+                    </article>
+                @empty
+                    <p class="rounded-md border border-dashed border-neutral-300 bg-stone-50 p-4 text-sm text-neutral-600">
+                        No comments yet. Add first discussion note for this issue.
+                    </p>
+                @endforelse
+            </div>
+        </section>
+
+        <aside class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+            <h3 class="text-sm font-bold text-neutral-950">Issue activity</h3>
+            <div class="mt-4 space-y-4">
+                @forelse ($activities->take(8) as $activity)
+                    <article class="border-l-2 border-neutral-200 pl-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="rounded bg-neutral-100 px-2 py-1 text-[10px] font-bold uppercase text-neutral-700">{{ $activity->action }}</span>
+                        </div>
+                        <p class="mt-2 text-sm font-semibold text-neutral-950">{{ $activity->user?->name ?? 'System' }}</p>
+                        @if ($activity->new_values || $activity->old_values)
+                            <p class="mt-1 text-xs leading-5 text-neutral-500">
+                                {{ collect($activity->new_values ?? $activity->old_values)->map(fn ($value, $key) => str_replace('_', ' ', $key) . ': ' . (is_scalar($value) ? $value : json_encode($value)))->join(' | ') }}
+                            </p>
+                        @endif
+                        <p class="mt-1 text-xs font-semibold text-neutral-400">{{ $activity->created_at?->diffForHumans() }}</p>
+                    </article>
+                @empty
+                    <p class="text-sm text-neutral-500">No activity yet.</p>
+                @endforelse
+            </div>
+        </aside>
+    </div>
 
     <form method="POST" action="{{ route('projects.issues.update', [$currentProject, $issue]) }}"
         class="mt-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">

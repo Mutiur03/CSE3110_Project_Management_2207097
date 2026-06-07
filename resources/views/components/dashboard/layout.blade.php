@@ -18,6 +18,8 @@
     $globalParentIssues = $currentProject
         ? $currentProject->issues()->whereIn('type', ['epic', 'story', 'task'])->orderBy('key')->get()
         : collect();
+    $unreadNotificationCount = auth()->user()?->unreadNotifications()->count() ?? 0;
+    $recentNotifications = auth()->user()?->unreadNotifications()->latest()->limit(6)->get() ?? collect();
 @endphp
 
 <x-layout>
@@ -81,7 +83,52 @@
                             @endif
                         </div>
 
-                        <div class="hidden lg:block"></div>
+                        <div class="hidden justify-end lg:flex">
+                            <div class="relative" data-notification-menu>
+                                <button type="button" data-notification-button
+                                    class="relative grid size-10 place-items-center rounded-md border border-neutral-200 bg-white text-neutral-700 transition hover:border-neutral-950 hover:text-neutral-950">
+                                    <span class="sr-only">Notifications</span>
+                                    <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.8" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M14.75 18.5a2.75 2.75 0 0 1-5.5 0M18 9.5a6 6 0 1 0-12 0c0 7-2.25 7.5-2.25 7.5h16.5S18 16.5 18 9.5Z" />
+                                    </svg>
+                                    @if ($unreadNotificationCount > 0)
+                                        <span class="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
+                                            {{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}
+                                        </span>
+                                    @endif
+                                </button>
+
+                                <div data-notification-panel
+                                    class="absolute right-0 top-full z-50 mt-2 hidden w-80 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-lg">
+                                    <div class="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3">
+                                        <p class="text-sm font-bold text-neutral-950">Notifications</p>
+                                        @if ($unreadNotificationCount > 0)
+                                            <form method="POST" action="{{ route('notifications.read') }}">
+                                                @csrf
+                                                <button type="submit" class="text-xs font-bold text-blue-600 underline-offset-4 hover:underline">
+                                                    Mark read
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+
+                                    <div class="max-h-96 overflow-y-auto">
+                                        @forelse ($recentNotifications as $notification)
+                                            <a href="{{ data_get($notification->data, 'url', '#') }}" wire:navigate
+                                                class="block border-b border-neutral-100 px-4 py-3 transition last:border-b-0 hover:bg-stone-50">
+                                                <p class="text-sm font-bold text-neutral-950">{{ data_get($notification->data, 'title', 'Project update') }}</p>
+                                                <p class="mt-1 text-xs leading-5 text-neutral-600">{{ data_get($notification->data, 'message') }}</p>
+                                                <p class="mt-1 text-[11px] font-semibold text-neutral-400">{{ $notification->created_at?->diffForHumans() }}</p>
+                                            </a>
+                                        @empty
+                                            <p class="px-4 py-6 text-sm text-neutral-500">No unread notifications.</p>
+                                        @endforelse
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </header>
 
@@ -126,6 +173,12 @@
                 });
                 document.querySelectorAll('[data-project-switcher-icon]').forEach(icon => {
                     icon.classList.remove('rotate-180');
+                });
+            };
+
+            const closeNotificationPanels = () => {
+                document.querySelectorAll('[data-notification-panel]').forEach(panel => {
+                    panel.classList.add('hidden');
                 });
             };
 
@@ -226,6 +279,72 @@
             updateIssueForms();
             document.addEventListener('livewire:navigated', updateIssueForms);
 
+            let draggedBoardCard = null;
+
+            document.addEventListener('dragstart', event => {
+                const card = event.target.closest('[data-board-card]');
+
+                if (! card) {
+                    return;
+                }
+
+                draggedBoardCard = card;
+                card.classList.add('opacity-60');
+                event.dataTransfer.effectAllowed = 'move';
+            });
+
+            document.addEventListener('dragend', event => {
+                event.target.closest('[data-board-card]')?.classList.remove('opacity-60');
+                document.querySelectorAll('[data-board-column]').forEach(column => {
+                    column.classList.remove('border-neutral-950', 'bg-white');
+                });
+                draggedBoardCard = null;
+            });
+
+            document.addEventListener('dragover', event => {
+                const column = event.target.closest('[data-board-column]');
+
+                if (! column || ! draggedBoardCard) {
+                    return;
+                }
+
+                event.preventDefault();
+                column.classList.add('border-neutral-950', 'bg-white');
+                event.dataTransfer.dropEffect = 'move';
+            });
+
+            document.addEventListener('dragleave', event => {
+                const column = event.target.closest('[data-board-column]');
+
+                if (column && ! column.contains(event.relatedTarget)) {
+                    column.classList.remove('border-neutral-950', 'bg-white');
+                }
+            });
+
+            document.addEventListener('drop', event => {
+                const column = event.target.closest('[data-board-column]');
+
+                if (! column || ! draggedBoardCard) {
+                    return;
+                }
+
+                event.preventDefault();
+                const nextStatus = column.dataset.boardColumn;
+                const currentStatus = draggedBoardCard.dataset.currentStatus;
+
+                if (! nextStatus || nextStatus === currentStatus) {
+                    return;
+                }
+
+                const form = draggedBoardCard.querySelector('[data-board-drop-form]');
+                const statusInput = draggedBoardCard.querySelector('[data-board-status-input]');
+
+                if (form && statusInput) {
+                    statusInput.value = nextStatus;
+                    form.submit();
+                }
+            });
+
             document.addEventListener('click', event => {
                 const modalTrigger = event.target.closest('[data-modal-target]');
 
@@ -249,6 +368,13 @@
 
                 const switcherButton = event.target.closest('[data-project-switcher-button]');
 
+                const notificationButton = event.target.closest('[data-notification-button]');
+
+                if (notificationButton) {
+                    notificationButton.closest('[data-notification-menu]')?.querySelector('[data-notification-panel]')?.classList.toggle('hidden');
+                    return;
+                }
+
                 if (switcherButton) {
                     const switcher = switcherButton.closest('[data-project-switcher]');
                     const menu = switcher?.querySelector('[data-project-switcher-menu]');
@@ -262,11 +388,16 @@
                 if (! event.target.closest('[data-project-switcher]')) {
                     closeProjectSwitchers();
                 }
+
+                if (! event.target.closest('[data-notification-menu]')) {
+                    closeNotificationPanels();
+                }
             });
 
             document.addEventListener('keydown', event => {
                 if (event.key === 'Escape') {
                     closeProjectSwitchers();
+                    closeNotificationPanels();
                     document.querySelectorAll('[data-modal]').forEach(modal => modal.classList.add('hidden'));
                 }
             });

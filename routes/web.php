@@ -5,8 +5,11 @@ use App\Http\Controllers\Auth\Login;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\BoardController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IssueController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProjectActivityController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\SprintController;
@@ -28,6 +31,7 @@ Route::middleware('guest')->group(function () {
 
 Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'no_back_history'])->name('dashboard');
 Route::middleware(['auth', 'no_back_history'])->group(function () {
+    Route::post('/notifications/read', [NotificationController::class, 'markAllRead'])->name('notifications.read');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::get('/projects/{project}/members', [ProjectMemberController::class, 'index'])->name('projects.members.index');
@@ -42,6 +46,8 @@ Route::middleware(['auth', 'no_back_history'])->group(function () {
     Route::post('/projects/{project}/issues', [IssueController::class, 'store'])->name('projects.issues.store');
     Route::get('/projects/{project}/issues/{issue}', [IssueController::class, 'show'])->name('projects.issues.show');
     Route::patch('/projects/{project}/issues/{issue}', [IssueController::class, 'update'])->name('projects.issues.update');
+    Route::post('/projects/{project}/issues/{issue}/comments', [CommentController::class, 'store'])->name('projects.issues.comments.store');
+    Route::delete('/projects/{project}/issues/{issue}/comments/{comment}', [CommentController::class, 'destroy'])->name('projects.issues.comments.destroy');
     Route::get('/projects/{project}/sprints', [SprintController::class, 'index'])->name('projects.sprints.index');
     Route::post('/projects/{project}/sprints', [SprintController::class, 'store'])->name('projects.sprints.store');
     Route::patch('/projects/{project}/sprints/{sprint}', [SprintController::class, 'update'])->name('projects.sprints.update');
@@ -51,4 +57,5 @@ Route::middleware(['auth', 'no_back_history'])->group(function () {
     Route::post('/projects/{project}/sprints/{sprint}/complete', [SprintController::class, 'complete'])->name('projects.sprints.complete');
     Route::get('/projects/{project}/board', [BoardController::class, 'index'])->name('projects.board.index');
     Route::patch('/projects/{project}/board/issues/{issue}/status', [BoardController::class, 'updateIssueStatus'])->name('projects.board.issues.status');
+    Route::get('/projects/{project}/activity', ProjectActivityController::class)->name('projects.activity.index');
 });

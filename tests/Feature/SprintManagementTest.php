@@ -143,6 +143,10 @@ class SprintManagementTest extends TestCase
             'name' => 'Sprint 2',
             'status' => 'planned',
         ]);
+        $this->createIssue($project, $owner, [
+            'sprint_id' => $plannedSprint->id,
+            'status' => 'selected',
+        ]);
 
         $response = $this->actingAs($owner)->post(route('projects.sprints.start', [$project, $plannedSprint]), [
             'confirm_replace_active' => '1',
@@ -183,6 +187,48 @@ class SprintManagementTest extends TestCase
         $this->assertDatabaseHas('sprints', [
             'id' => $plannedSprint->id,
             'status' => 'planned',
+        ]);
+    }
+
+    public function test_sprint_cannot_start_without_issues(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $sprint = Sprint::create([
+            'project_id' => $project->id,
+            'name' => 'Sprint 1',
+            'status' => 'planned',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.sprints.start', [$project, $sprint]));
+
+        $response->assertSessionHasErrors('sprint');
+        $this->assertDatabaseHas('sprints', [
+            'id' => $sprint->id,
+            'status' => 'planned',
+        ]);
+    }
+
+    public function test_epic_cannot_be_added_to_sprint(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $sprint = Sprint::create([
+            'project_id' => $project->id,
+            'name' => 'Sprint 1',
+            'status' => 'planned',
+        ]);
+        $epic = $this->createIssue($project, $owner, [
+            'type' => 'epic',
+            'title' => 'Authentication platform',
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('projects.sprints.issues.store', [$project, $sprint]), [
+            'issue_id' => $epic->id,
+        ]);
+
+        $response->assertSessionHasErrors('issue_id');
+        $this->assertDatabaseHas('issues', [
+            'id' => $epic->id,
+            'sprint_id' => null,
         ]);
     }
 

@@ -19,6 +19,7 @@
     $isIssuesActive = request()->routeIs('projects.issues.*');
     $isSprintsActive = request()->routeIs('projects.sprints.*');
     $isBoardActive = request()->routeIs('projects.board.*');
+    $isActivityActive = request()->routeIs('projects.activity.*');
 @endphp
 
 <aside id="dashboard-sidebar"
@@ -135,6 +136,16 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 5.5h16M6.5 8.5v10M12 8.5v10M17.5 8.5v10" />
                 </svg>
                 Board
+            </a>
+
+            <a href="{{ route('projects.activity.index', $currentProject) }}" wire:navigate
+                class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isActivityActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
+                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 6v6l3.5 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                Activity
             </a>
         @endif
     </nav>

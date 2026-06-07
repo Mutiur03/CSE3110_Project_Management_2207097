@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\Issue;
 use App\Models\Project;
+use App\Notifications\ProjectEventNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,6 +77,19 @@ class BoardController extends Controller
             'old_values' => ['status' => $oldStatus],
             'new_values' => ['status' => $issue->status],
         ]);
+
+        $issue->loadMissing(['reporter', 'assignee']);
+        collect([$issue->reporter, $issue->assignee])
+            ->filter()
+            ->unique('id')
+            ->reject(fn ($user) => $user->is($request->user()))
+            ->each(fn ($user) => $user->notify(new ProjectEventNotification(
+                'Issue status changed',
+                "{$issue->key} moved from {$oldStatus} to {$issue->status}.",
+                route('projects.issues.show', [$project, $issue]),
+                $project->id,
+                $issue->id,
+            )));
 
         return redirect()
             ->route('projects.board.index', $project)

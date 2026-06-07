@@ -72,4 +72,9 @@ class Issue extends Model
     {
         return $this->hasMany(Comment::class);
     }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
 }

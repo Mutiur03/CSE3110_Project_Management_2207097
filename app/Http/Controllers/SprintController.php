@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Issue;
 use App\Models\Project;
 use App\Models\Sprint;
+use App\Notifications\ProjectEventNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +30,8 @@ class SprintController extends Controller
             'backlogIssues' => $project->issues()
                 ->whereNull('sprint_id')
                 ->where('status', 'backlog')
+                ->whereIn('type', ['story', 'task', 'subtask', 'bug'])
+                ->with(['assignee', 'team'])
                 ->orderBy('key')
                 ->get(),
         ]);
@@ -113,6 +116,18 @@ class SprintController extends Controller
         $issue = Issue::findOrFail($validated['issue_id']);
         $this->assertIssueBelongsToProject($issue, $project);
 
+        if ($issue->type === 'epic') {
+            return back()->withErrors([
+                'issue_id' => 'Epics stay in the backlog. Add stories, tasks, subtasks, or bugs to a sprint.',
+            ]);
+        }
+
+        if ($issue->sprint_id || $issue->status !== 'backlog') {
+            return back()->withErrors([
+                'issue_id' => 'Only backlog issues without a sprint can be added.',
+            ]);
+        }
+
         $issue->update([
             'sprint_id' => $sprint->id,
             'status' => $issue->status === 'backlog' ? 'selected' : $issue->status,
@@ -176,6 +191,12 @@ class SprintController extends Controller
             ->whereKeyNot($sprint->id)
             ->first();
 
+        if (! $sprint->issues()->exists()) {
+            return back()->withErrors([
+                'sprint' => 'Add at least one issue before starting a sprint.',
+            ]);
+        }
+
         if ($activeSprint && ! $request->boolean('confirm_replace_active')) {
             return back()->withErrors([
                 'sprint' => "Confirm before starting {$sprint->name}. {$activeSprint->name} is already active and will move back to planned.",
@@ -193,6 +214,8 @@ class SprintController extends Controller
             'subject_id' => $sprint->id,
             'new_values' => ['status' => 'active'],
         ]);
+
+        $this->notifyProjectMembers($request, $project, 'Sprint started', "{$sprint->name} is now active.", route('projects.board.index', $project));
 
         return redirect()
             ->route('projects.sprints.index', $project)
@@ -221,6 +244,8 @@ class SprintController extends Controller
             'subject_id' => $sprint->id,
             'new_values' => ['status' => 'completed'],
         ]);
+
+        $this->notifyProjectMembers($request, $project, 'Sprint completed', "{$sprint->name} has been completed.", route('projects.sprints.index', $project));
 
         return redirect()
             ->route('projects.sprints.index', $project)
@@ -253,5 +278,19 @@ class SprintController extends Controller
             ->orWhereHas('members', fn ($query) => $query->where('users.id', $request->user()->id))
             ->orderBy('name')
             ->get();
+    }
+
+    private function notifyProjectMembers(Request $request, Project $project, string $title, string $message, string $url): void
+    {
+        $project->members()
+            ->get()
+            ->unique('id')
+            ->reject(fn ($user) => $user->is($request->user()))
+            ->each(fn ($user) => $user->notify(new ProjectEventNotification(
+                $title,
+                $message,
+                $url,
+                $project->id,
+            )));
     }
 }
