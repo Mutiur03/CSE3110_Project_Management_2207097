@@ -35,6 +35,50 @@ class IssueManagementTest extends TestCase
         $response->assertSee('Create backlog page');
     }
 
+    public function test_backlog_page_shows_folding_attributes_for_issues_with_children(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $epic = Issue::create([
+            'project_id' => $project->id,
+            'reporter_id' => $owner->id,
+            'key' => 'CP-1',
+            'title' => 'Core Epic',
+            'type' => 'epic',
+            'status' => 'backlog',
+            'priority' => 'medium',
+        ]);
+        $story = Issue::create([
+            'project_id' => $project->id,
+            'reporter_id' => $owner->id,
+            'key' => 'CP-2',
+            'title' => 'Child Story',
+            'type' => 'story',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'parent_issue_id' => $epic->id,
+            'story_points' => 3,
+        ]);
+        $subtask = Issue::create([
+            'project_id' => $project->id,
+            'reporter_id' => $owner->id,
+            'key' => 'CP-3',
+            'title' => 'Child Subtask',
+            'type' => 'subtask',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'parent_issue_id' => $story->id,
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('projects.issues.index', $project));
+
+        $response->assertOk();
+        $response->assertSee('data-backlog-row');
+        $response->assertSee('data-toggle-for="' . $epic->id . '"');
+        $response->assertSee('data-toggle-for="' . $story->id . '"');
+        $response->assertSee('data-parent-id="' . $epic->id . '"');
+        $response->assertSee('data-parent-id="' . $story->id . '"');
+    }
+
     public function test_user_can_create_issue_without_team_or_assignee(): void
     {
         [$owner, $project] = $this->createProjectWithOwner();

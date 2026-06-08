@@ -271,9 +271,79 @@
                 });
             };
 
+            const initBacklogFolding = () => {
+                const toggles = document.querySelectorAll('.fold-toggle');
+                if (toggles.length === 0) return;
+
+                const collapsedIssues = new Set();
+
+                // Initialize all parent issues as collapsed by default
+                toggles.forEach(toggle => {
+                    const issueId = toggle.dataset.toggleFor;
+                    collapsedIssues.add(issueId);
+
+                    const svg = toggle.querySelector('svg');
+                    if (svg) {
+                        svg.style.transform = 'rotate(-90deg)';
+                    }
+                });
+
+                const updateVisibility = () => {
+                    document.querySelectorAll('[data-backlog-row]').forEach(row => {
+                        let parentId = row.dataset.parentId;
+                        let shouldHide = false;
+                        while (parentId) {
+                            if (collapsedIssues.has(parentId)) {
+                                shouldHide = true;
+                                break;
+                            }
+                            const parentRow = document.querySelector(`[data-issue-id="${parentId}"]`);
+                            parentId = parentRow ? parentRow.dataset.parentId : null;
+                        }
+                        row.classList.toggle('hidden', shouldHide);
+                    });
+                };
+
+                // Run visibility update immediately to apply initial collapsed state
+                updateVisibility();
+
+                toggles.forEach(toggle => {
+                    if (toggle.dataset.bound) return;
+                    toggle.dataset.bound = 'true';
+
+                    toggle.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const issueId = toggle.dataset.toggleFor;
+                        const svg = toggle.querySelector('svg');
+
+                        if (collapsedIssues.has(issueId)) {
+                            // Expand
+                            collapsedIssues.delete(issueId);
+                            if (svg) {
+                                svg.style.transform = 'rotate(0deg)';
+                            }
+                        } else {
+                            // Collapse
+                            collapsedIssues.add(issueId);
+                            if (svg) {
+                                svg.style.transform = 'rotate(-90deg)';
+                            }
+                        }
+
+                        updateVisibility();
+                    });
+                });
+            };
+
             updateIssueForms();
+            initBacklogFolding();
             startRealtimeNotifications();
-            document.addEventListener('livewire:navigated', updateIssueForms);
+            document.addEventListener('livewire:navigated', () => {
+                updateIssueForms();
+                initBacklogFolding();
+            });
 
             let draggedBoardCard = null;
 

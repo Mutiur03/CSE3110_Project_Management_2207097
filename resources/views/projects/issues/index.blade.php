@@ -141,6 +141,7 @@
                                     'priorityTones' => $priorityTones,
                                     'statusLabels' => $statusLabels,
                                     'indent' => 0,
+                                    'hasChildren' => $childrenByParent->get($epic->id, collect())->where('type', 'story')->isNotEmpty(),
                                 ])
 
                                 @foreach ($childrenByParent->get($epic->id, collect())->where('type', 'story') as $story)
@@ -151,6 +152,7 @@
                                         'priorityTones' => $priorityTones,
                                         'statusLabels' => $statusLabels,
                                         'indent' => 1,
+                                        'hasChildren' => $childrenByParent->get($story->id, collect())->where('type', 'subtask')->isNotEmpty(),
                                     ])
 
                                     @foreach ($childrenByParent->get($story->id, collect())->where('type', 'subtask') as $subtask)
@@ -161,6 +163,7 @@
                                             'priorityTones' => $priorityTones,
                                             'statusLabels' => $statusLabels,
                                             'indent' => 2,
+                                            'hasChildren' => false,
                                         ])
                                     @endforeach
                                 @endforeach
@@ -168,14 +171,29 @@
                         @endforeach
 
                         @foreach ($standaloneStories as $story)
-                            @include('projects.issues.partials.backlog-row', [
-                                'issue' => $story,
-                                'currentProject' => $currentProject,
-                                'typeTones' => $typeTones,
-                                'priorityTones' => $priorityTones,
-                                'statusLabels' => $statusLabels,
-                                'indent' => 0,
-                            ])
+                            <div>
+                                @include('projects.issues.partials.backlog-row', [
+                                    'issue' => $story,
+                                    'currentProject' => $currentProject,
+                                    'typeTones' => $typeTones,
+                                    'priorityTones' => $priorityTones,
+                                    'statusLabels' => $statusLabels,
+                                    'indent' => 0,
+                                    'hasChildren' => $childrenByParent->get($story->id, collect())->where('type', 'subtask')->isNotEmpty(),
+                                ])
+
+                                @foreach ($childrenByParent->get($story->id, collect())->where('type', 'subtask') as $subtask)
+                                    @include('projects.issues.partials.backlog-row', [
+                                        'issue' => $subtask,
+                                        'currentProject' => $currentProject,
+                                        'typeTones' => $typeTones,
+                                        'priorityTones' => $priorityTones,
+                                        'statusLabels' => $statusLabels,
+                                        'indent' => 1,
+                                        'hasChildren' => false,
+                                    ])
+                                @endforeach
+                            </div>
                         @endforeach
 
                         @foreach ($standaloneTasks as $task)
@@ -187,6 +205,7 @@
                                     'priorityTones' => $priorityTones,
                                     'statusLabels' => $statusLabels,
                                     'indent' => 0,
+                                    'hasChildren' => $childrenByParent->get($task->id, collect())->where('type', 'subtask')->isNotEmpty(),
                                 ])
 
                                 @foreach ($childrenByParent->get($task->id, collect())->where('type', 'subtask') as $subtask)
@@ -197,6 +216,7 @@
                                         'priorityTones' => $priorityTones,
                                         'statusLabels' => $statusLabels,
                                         'indent' => 1,
+                                        'hasChildren' => false,
                                     ])
                                 @endforeach
                             </div>
@@ -210,6 +230,7 @@
                                 'priorityTones' => $priorityTones,
                                 'statusLabels' => $statusLabels,
                                 'indent' => 0,
+                                'hasChildren' => false,
                             ])
                         @endforeach
 
@@ -221,6 +242,7 @@
                                 'priorityTones' => $priorityTones,
                                 'statusLabels' => $statusLabels,
                                 'indent' => 0,
+                                'hasChildren' => false,
                             ])
                         @endforeach
                     </div>

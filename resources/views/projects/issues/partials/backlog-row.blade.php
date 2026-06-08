@@ -5,6 +5,7 @@
     'priorityTones',
     'statusLabels',
     'indent' => 0,
+    'hasChildren' => false,
 ])
 
 @php
@@ -35,9 +36,22 @@
         ->implode('');
 @endphp
 
-<div class="group grid grid-cols-[minmax(24rem,1fr)_13rem_13rem_9rem_8rem] border-b border-neutral-100 text-sm text-neutral-700 transition hover:bg-stone-50">
+<div data-backlog-row
+     data-issue-id="{{ $issue->id }}"
+     data-parent-id="{{ $issue->parent_issue_id }}"
+     class="group grid grid-cols-[minmax(24rem,1fr)_13rem_13rem_9rem_8rem] border-b border-neutral-100 text-sm text-neutral-700 transition hover:bg-stone-50">
     <div class="relative min-w-0 border-r border-neutral-100 px-3 py-2.5 {{ $indentClass }} {{ $lineClass }}">
         <div class="flex min-w-0 items-center gap-2">
+            @if ($hasChildren)
+                <button type="button" class="fold-toggle shrink-0 flex items-center justify-center size-5 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors focus:outline-none" data-toggle-for="{{ $issue->id }}" aria-label="Toggle children">
+                    <svg class="size-3.5 transition-transform duration-200" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+                    </svg>
+                </button>
+            @else
+                <div class="size-5 shrink-0"></div>
+            @endif
+
             <svg class="size-4 shrink-0 {{ $typeTones[$issue->type] ?? 'text-neutral-500' }}" xmlns="http://www.w3.org/2000/svg" fill="none"
                 viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $typeIcons[$issue->type] ?? $typeIcons['task'] }}" />
