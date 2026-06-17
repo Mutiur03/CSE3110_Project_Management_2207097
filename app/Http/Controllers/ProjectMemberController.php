@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
 use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\User;
@@ -14,6 +15,8 @@ use Illuminate\Validation\Rule;
 
 class ProjectMemberController extends Controller
 {
+    use AuthorizesProjectMembership;
+
     public function index(Request $request, Project $project): View
     {
         $this->authorizeProjectAccess($request, $project);
@@ -146,38 +149,5 @@ class ProjectMemberController extends Controller
         return redirect()
             ->route('projects.members.index', $project)
             ->with('status', 'Project member removed.');
-    }
-
-    private function authorizeProjectAccess(Request $request, Project $project): void
-    {
-        abort_unless(
-            $project->owner_id === $request->user()->id
-                || $project->members()->where('users.id', $request->user()->id)->exists(),
-            403
-        );
-    }
-
-    private function authorizeProjectManagement(Request $request, Project $project): void
-    {
-        $memberRole = $project->members()
-            ->where('users.id', $request->user()->id)
-            ->first()
-            ?->pivot
-            ?->role;
-
-        abort_unless(
-            $project->owner_id === $request->user()->id
-                || in_array($memberRole, ['project_owner', 'scrum_master'], true),
-            403
-        );
-    }
-
-    private function userProjects(Request $request)
-    {
-        return Project::query()
-            ->where('owner_id', $request->user()->id)
-            ->orWhereHas('members', fn ($query) => $query->where('users.id', $request->user()->id))
-            ->orderBy('name')
-            ->get();
     }
 }

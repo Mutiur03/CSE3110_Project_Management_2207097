@@ -18,6 +18,7 @@
     $globalParentIssues = $currentProject
         ? $currentProject->issues()->whereIn('type', ['epic', 'story', 'task'])->orderBy('key')->get()
         : collect();
+    $canWriteProject = $currentProject?->userCanWrite(auth()->user()) ?? false;
 @endphp
 
 <x-layout>
@@ -60,7 +61,7 @@
                                 <input type="search" placeholder="Search projects, teams, issues"
                                     class="w-full rounded-md border border-neutral-200 bg-stone-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                             </label>
-                            @if ($currentProject)
+                            @if ($currentProject && $canWriteProject)
                                 <button type="button" data-modal-target="global-create-issue-modal"
                                     class="inline-flex shrink-0 items-center gap-2 rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
                                     <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -93,7 +94,7 @@
             </div>
         </div>
 
-        @if ($currentProject)
+        @if ($currentProject && $canWriteProject)
             <x-dashboard.modal id="global-create-issue-modal" title="Create backlog item" :open="old('_form') === 'global-create-issue'">
                 <form method="POST" action="{{ route('projects.issues.store', $currentProject) }}">
                     @csrf

@@ -13,6 +13,8 @@
         'high' => 'bg-orange-100 text-orange-700',
         'urgent' => 'bg-rose-100 text-rose-700',
     ];
+
+    $canWrite = $currentProject->userCanWrite(auth()->user());
 @endphp
 
 <x-dashboard.layout title="Board" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -52,8 +54,11 @@
 
                     <div data-board-drop-zone class="min-h-56 space-y-3">
                         @forelse ($column['issues'] as $issue)
-                            <article draggable="true" data-board-card data-current-status="{{ $issue->status }}"
-                                class="cursor-grab rounded-lg border border-neutral-200 bg-white p-4 shadow-sm transition active:cursor-grabbing">
+                            <article @if ($canWrite) draggable="true" @endif data-board-card data-current-status="{{ $issue->status }}"
+                                @class([
+                                    'rounded-lg border border-neutral-200 bg-white p-4 shadow-sm transition',
+                                    'cursor-grab active:cursor-grabbing' => $canWrite,
+                                ])>
                                 <form method="POST" action="{{ route('projects.board.issues.status', [$currentProject, $issue]) }}" data-board-drop-form>
                                     @csrf
                                     @method('PATCH')
@@ -86,6 +91,7 @@
 
                                 <p class="mt-2 text-xs text-neutral-500">{{ $issue->assignee?->name ?? 'Unassigned' }} / {{ $issue->team?->name ?? 'No team' }}</p>
 
+                                @if ($canWrite)
                                 <div class="mt-4 grid gap-2">
                                     @foreach ($workflow as $status => $label)
                                         @if ($status !== $issue->status)
@@ -101,6 +107,7 @@
                                         @endif
                                     @endforeach
                                 </div>
+                                @endif
                             </article>
                         @empty
                             <p class="rounded-md border border-dashed border-neutral-300 bg-white p-4 text-sm text-neutral-500">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
 use App\Models\ActivityLog;
 use App\Models\Issue;
 use App\Models\Project;
@@ -14,6 +15,8 @@ use Illuminate\Validation\Rule;
 
 class SprintController extends Controller
 {
+    use AuthorizesProjectMembership;
+
     public function index(Request $request, Project $project): View
     {
         $this->authorizeProjectAccess($request, $project);
@@ -39,7 +42,7 @@ class SprintController extends Controller
 
     public function store(Request $request, Project $project): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -73,7 +76,7 @@ class SprintController extends Controller
 
     public function update(Request $request, Project $project, Sprint $sprint): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         $this->assertSprintBelongsToProject($sprint, $project);
 
         $validated = $request->validate([
@@ -103,7 +106,7 @@ class SprintController extends Controller
 
     public function addIssue(Request $request, Project $project, Sprint $sprint): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         $this->assertSprintBelongsToProject($sprint, $project);
 
         $validated = $request->validate([
@@ -153,7 +156,7 @@ class SprintController extends Controller
 
     public function removeIssue(Request $request, Project $project, Sprint $sprint, Issue $issue): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         $this->assertSprintBelongsToProject($sprint, $project);
         $this->assertIssueBelongsToProject($issue, $project);
         abort_unless($issue->sprint_id === $sprint->id, 404);
@@ -183,7 +186,7 @@ class SprintController extends Controller
 
     public function start(Request $request, Project $project, Sprint $sprint): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         $this->assertSprintBelongsToProject($sprint, $project);
 
         $activeSprint = $project->sprints()
@@ -224,7 +227,7 @@ class SprintController extends Controller
 
     public function complete(Request $request, Project $project, Sprint $sprint): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         $this->assertSprintBelongsToProject($sprint, $project);
 
         $sprint->issues()
@@ -252,15 +255,6 @@ class SprintController extends Controller
             ->with('status', 'Sprint completed.');
     }
 
-    private function authorizeProjectAccess(Request $request, Project $project): void
-    {
-        abort_unless(
-            $project->owner_id === $request->user()->id
-                || $project->members()->where('users.id', $request->user()->id)->exists(),
-            403
-        );
-    }
-
     private function assertSprintBelongsToProject(Sprint $sprint, Project $project): void
     {
         abort_unless($sprint->project_id === $project->id, 404);
@@ -269,15 +263,6 @@ class SprintController extends Controller
     private function assertIssueBelongsToProject(Issue $issue, Project $project): void
     {
         abort_unless($issue->project_id === $project->id, 404);
-    }
-
-    private function userProjects(Request $request)
-    {
-        return Project::query()
-            ->where('owner_id', $request->user()->id)
-            ->orWhereHas('members', fn ($query) => $query->where('users.id', $request->user()->id))
-            ->orderBy('name')
-            ->get();
     }
 
     private function notifyProjectMembers(Request $request, Project $project, string $title, string $message, string $url): void

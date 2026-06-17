@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
 use App\Models\ActivityLog;
 use App\Models\Comment;
 use App\Models\Issue;
@@ -12,9 +13,11 @@ use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
+    use AuthorizesProjectMembership;
+
     public function store(Request $request, Project $project, Issue $issue): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         $this->assertIssueBelongsToProject($issue, $project);
 
         $validated = $request->validate([
@@ -59,7 +62,7 @@ class CommentController extends Controller
 
     public function destroy(Request $request, Project $project, Issue $issue, Comment $comment): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         $this->assertIssueBelongsToProject($issue, $project);
         abort_unless($comment->issue_id === $issue->id, 404);
 
@@ -82,15 +85,6 @@ class CommentController extends Controller
         return redirect()
             ->route('projects.issues.show', [$project, $issue])
             ->with('status', 'Comment deleted.');
-    }
-
-    private function authorizeProjectAccess(Request $request, Project $project): void
-    {
-        abort_unless(
-            $project->owner_id === $request->user()->id
-                || $project->members()->where('users.id', $request->user()->id)->exists(),
-            403
-        );
     }
 
     private function assertIssueBelongsToProject(Issue $issue, Project $project): void

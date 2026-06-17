@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
 use App\Models\ActivityLog;
 use App\Models\Issue;
 use App\Models\Project;
@@ -13,6 +14,8 @@ use Illuminate\Validation\Rule;
 
 class BoardController extends Controller
 {
+    use AuthorizesProjectMembership;
+
     public function index(Request $request, Project $project): View
     {
         $this->authorizeProjectAccess($request, $project);
@@ -51,7 +54,7 @@ class BoardController extends Controller
 
     public function updateIssueStatus(Request $request, Project $project, Issue $issue): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         abort_unless($issue->project_id === $project->id, 404);
 
         $validated = $request->validate([
@@ -93,23 +96,5 @@ class BoardController extends Controller
         return redirect()
             ->route('projects.board.index', $project)
             ->with('status', 'Issue status updated.');
-    }
-
-    private function authorizeProjectAccess(Request $request, Project $project): void
-    {
-        abort_unless(
-            $project->owner_id === $request->user()->id
-                || $project->members()->where('users.id', $request->user()->id)->exists(),
-            403
-        );
-    }
-
-    private function userProjects(Request $request)
-    {
-        return Project::query()
-            ->where('owner_id', $request->user()->id)
-            ->orWhereHas('members', fn ($query) => $query->where('users.id', $request->user()->id))
-            ->orderBy('name')
-            ->get();
     }
 }

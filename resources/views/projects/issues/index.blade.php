@@ -29,6 +29,7 @@
     $standaloneTasks = $rootIssues->where('type', 'task');
     $standaloneBugs = $rootIssues->where('type', 'bug');
     $standaloneSubtasks = $rootIssues->where('type', 'subtask');
+    $canWrite = $currentProject->userCanWrite(auth()->user());
 @endphp
 
 <x-dashboard.layout title="Issues" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -98,6 +99,7 @@
         </form>
     </section>
 
+    @if ($canWrite)
     <x-dashboard.modal id="create-issue-modal" title="Create issue">
         <form method="POST" action="{{ route('projects.issues.store', $currentProject) }}">
             @csrf
@@ -114,6 +116,7 @@
             ])
         </form>
     </x-dashboard.modal>
+    @endif
 
     <section class="mt-6 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
         @if ($issues->isEmpty())
