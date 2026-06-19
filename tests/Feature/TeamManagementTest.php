@@ -99,6 +99,90 @@ class TeamManagementTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_user_can_remove_member_from_team(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $member = User::factory()->create();
+        $this->addProjectMember($project, $member);
+        $team = Team::create([
+            'project_id' => $project->id,
+            'name' => 'Frontend Team',
+        ]);
+        $this->addTeamMember($team, $member);
+
+        $response = $this->actingAs($owner)->delete(route('projects.teams.members.destroy', [$project, $team, $member]));
+
+        $response->assertRedirect(route('projects.teams.index', $project));
+        $this->assertDatabaseMissing('team_members', [
+            'team_id' => $team->id,
+            'user_id' => $member->id,
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'project_id' => $project->id,
+            'user_id' => $owner->id,
+            'action' => 'removed team member',
+        ]);
+    }
+
+    public function test_user_can_delete_team_and_unassign_linked_issues(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $team = Team::create([
+            'project_id' => $project->id,
+            'name' => 'Backend Team',
+        ]);
+        $issueId = (string) Str::uuid();
+        DB::table('issues')->insert([
+            'id' => $issueId,
+            'project_id' => $project->id,
+            'team_id' => $team->id,
+            'reporter_id' => $owner->id,
+            'key' => 'CP-1',
+            'title' => 'Team scoped task',
+            'type' => 'task',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($owner)->delete(route('projects.teams.destroy', [$project, $team]));
+
+        $response->assertRedirect(route('projects.teams.index', $project));
+        $this->assertDatabaseMissing('teams', ['id' => $team->id]);
+        $this->assertDatabaseHas('issues', [
+            'id' => $issueId,
+            'team_id' => null,
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'project_id' => $project->id,
+            'user_id' => $owner->id,
+            'action' => 'deleted team',
+        ]);
+    }
+
+    public function test_viewer_cannot_remove_team_member(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $viewer = User::factory()->create();
+        $member = User::factory()->create();
+        $this->addProjectMember($project, $viewer, 'viewer');
+        $this->addProjectMember($project, $member);
+        $team = Team::create([
+            'project_id' => $project->id,
+            'name' => 'QA Team',
+        ]);
+        $this->addTeamMember($team, $member);
+
+        $response = $this->actingAs($viewer)->delete(route('projects.teams.members.destroy', [$project, $team, $member]));
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('team_members', [
+            'team_id' => $team->id,
+            'user_id' => $member->id,
+        ]);
+    }
+
     private function createProjectWithOwner(): array
     {
         $owner = User::factory()->create();
@@ -118,6 +202,19 @@ class TeamManagementTest extends TestCase
         DB::table('project_members')->insert([
             'id' => (string) Str::uuid(),
             'project_id' => $project->id,
+            'user_id' => $user->id,
+            'role' => $role,
+            'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function addTeamMember(Team $team, User $user, string $role = 'developer'): void
+    {
+        DB::table('team_members')->insert([
+            'id' => (string) Str::uuid(),
+            'team_id' => $team->id,
             'user_id' => $user->id,
             'role' => $role,
             'joined_at' => now(),

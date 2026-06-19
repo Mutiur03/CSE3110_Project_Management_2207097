@@ -5,6 +5,7 @@
         'developer' => 'Developer',
         'viewer' => 'Viewer',
     ];
+    $canManage = $currentProject->userCanManage(auth()->user());
 @endphp
 
 <x-dashboard.layout title="Members" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -22,10 +23,12 @@
                     </p>
                 </div>
                 <div class="flex gap-2">
+                    @if ($canManage)
                     <button type="button" data-modal-target="add-project-member-modal"
                         class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                         Add member
                     </button>
+                    @endif
                     <a href="{{ route('dashboard', ['project' => $currentProject->id]) }}" wire:navigate
                         class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
                         Back
@@ -40,6 +43,7 @@
         </aside>
     </div>
 
+    @if ($canManage)
     <x-dashboard.modal id="add-project-member-modal" title="Add project member" :open="old('_form') === 'add-project-member'">
         <form method="POST" action="{{ route('projects.members.store', $currentProject) }}" class="space-y-4">
                 @csrf
@@ -74,6 +78,7 @@
                 </button>
         </form>
     </x-dashboard.modal>
+    @endif
 
     @error('member')
         <p class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ $message }}</p>
@@ -97,6 +102,7 @@
 
                     <p class="text-sm font-semibold text-neutral-600">{{ $roles[$member->pivot->role] ?? $member->pivot->role }}</p>
 
+                    @if ($canManage)
                     <button type="button" data-modal-target="manage-member-{{ $member->id }}"
                         class="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950 lg:justify-self-end">
                         Manage
@@ -130,6 +136,7 @@
                             </button>
                         </form>
                     </x-dashboard.modal>
+                    @endif
                 </div>
             @endforeach
         </div>

@@ -14,6 +14,7 @@
     ];
 
     $activeSprint = $sprints->firstWhere('status', 'active');
+    $canWrite = $currentProject->userCanWrite(auth()->user());
 @endphp
 
 <x-dashboard.layout title="Sprints" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -31,10 +32,12 @@
                     </p>
                 </div>
                 <div class="flex gap-2">
+                    @if ($canWrite)
                     <button type="button" data-modal-target="create-sprint-modal"
                         class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                         Create sprint
                     </button>
+                    @endif
                     <a href="{{ route('projects.issues.index', $currentProject) }}" wire:navigate
                         class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
                         Backlog
@@ -53,6 +56,7 @@
         <p class="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ $message }}</p>
     @enderror
 
+    @if ($canWrite)
     <x-dashboard.modal id="create-sprint-modal" title="Create sprint">
         <form method="POST" action="{{ route('projects.sprints.store', $currentProject) }}" class="space-y-4">
                 @csrf
@@ -91,6 +95,7 @@
                 </button>
         </form>
     </x-dashboard.modal>
+    @endif
 
     <div class="mt-6 grid gap-6">
         @forelse ($sprints as $sprint)
@@ -119,6 +124,7 @@
                         </p>
                     </div>
 
+                    @if ($canWrite)
                     <div class="flex flex-wrap gap-2">
                         <button type="button" data-modal-target="edit-sprint-{{ $sprint->id }}"
                             class="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
@@ -152,8 +158,10 @@
                             </form>
                         @endif
                     </div>
+                    @endif
                 </div>
 
+                @if ($canWrite)
                 <x-dashboard.modal id="edit-sprint-{{ $sprint->id }}" title="Edit {{ $sprint->name }}">
                     <form method="POST" action="{{ route('projects.sprints.update', [$currentProject, $sprint]) }}" class="space-y-4">
                         @csrf
@@ -190,6 +198,7 @@
                         </button>
                     </form>
                 </x-dashboard.modal>
+                @endif
 
                 <div class="mt-5 grid gap-5 xl:grid-cols-[1fr_20rem]">
                     <div>
@@ -208,7 +217,7 @@
                                         <p class="mt-2 truncate text-sm font-semibold text-neutral-950">{{ $issue->title }}</p>
                                         <p class="mt-1 text-xs text-neutral-500">{{ $issue->assignee?->name ?? 'Unassigned' }} · {{ $issue->team?->name ?? 'No team' }}</p>
                                     </div>
-                                    @if ($sprint->status !== 'completed')
+                                    @if ($canWrite && $sprint->status !== 'completed')
                                         <form method="POST" action="{{ route('projects.sprints.issues.destroy', [$currentProject, $sprint, $issue]) }}">
                                             @csrf
                                             @method('DELETE')
@@ -226,7 +235,7 @@
                         </div>
                     </div>
 
-                    @if ($sprint->status !== 'completed')
+                    @if ($canWrite && $sprint->status !== 'completed')
                         <form method="POST" action="{{ route('projects.sprints.issues.store', [$currentProject, $sprint]) }}"
                             class="rounded-lg border border-neutral-200 bg-stone-50 p-4">
                             @csrf

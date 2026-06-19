@@ -24,6 +24,8 @@
 
     $canHaveChildren = in_array($issue->type, ['epic', 'story', 'task'], true);
     $activities = $issue->activityLogs->sortByDesc('created_at');
+    $canWrite = $currentProject->userCanWrite(auth()->user());
+    $hasChildIssues = $issue->childIssues->isNotEmpty();
 @endphp
 
 <x-dashboard.layout title="{{ $issue->key }}" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -154,6 +156,7 @@
                 </div>
             </div>
 
+            @if ($canWrite)
             <form method="POST" action="{{ route('projects.issues.comments.store', [$currentProject, $issue]) }}" class="mt-4">
                 @csrf
                 <label for="comment-body" class="sr-only">Add comment</label>
@@ -168,6 +171,11 @@
                     </button>
                 </div>
             </form>
+            @else
+                <p class="mt-4 rounded-md border border-dashed border-neutral-300 bg-stone-50 p-4 text-sm text-neutral-600">
+                    Viewers can read comments but cannot add new ones.
+                </p>
+            @endif
 
             <div class="mt-5 space-y-3">
                 @forelse ($issue->comments->sortByDesc('created_at') as $comment)
@@ -189,6 +197,7 @@
                                     <p class="text-xs font-semibold text-neutral-500">{{ $comment->created_at?->diffForHumans() }}</p>
                                 </div>
                             </div>
+                            @if ($canWrite)
                             <form method="POST" action="{{ route('projects.issues.comments.destroy', [$currentProject, $issue, $comment]) }}">
                                 @csrf
                                 @method('DELETE')
@@ -196,6 +205,7 @@
                                     Delete
                                 </button>
                             </form>
+                            @endif
                         </div>
                         <p class="mt-3 whitespace-pre-line text-sm leading-6 text-neutral-700">{{ $comment->body }}</p>
                     </article>
@@ -230,6 +240,7 @@
         </aside>
     </div>
 
+    @if ($canWrite)
     <form method="POST" action="{{ route('projects.issues.update', [$currentProject, $issue]) }}"
         class="mt-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         @csrf
@@ -245,4 +256,31 @@
             'fieldPrefix' => 'edit-issue',
         ])
     </form>
+
+    <section class="mt-6 rounded-lg border border-rose-100 bg-white p-5 shadow-sm">
+        <h3 class="text-sm font-bold text-neutral-950">Delete issue</h3>
+        @if ($hasChildIssues)
+            <p class="mt-2 text-sm leading-6 text-neutral-600">
+                This issue still has child issues. Remove or reassign them before deleting {{ $issue->key }}.
+            </p>
+        @else
+            <p class="mt-2 text-sm leading-6 text-neutral-600">
+                Permanently remove {{ $issue->key }} and its comments from this project.
+            </p>
+            @error('issue')
+                <p class="mt-3 text-sm font-medium text-red-600">{{ $message }}</p>
+            @enderror
+            <form method="POST" action="{{ route('projects.issues.destroy', [$currentProject, $issue]) }}"
+                class="mt-4"
+                onsubmit="return confirm('Delete {{ $issue->key }}? This cannot be undone.')">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                    class="rounded-md px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50">
+                    Delete issue
+                </button>
+            </form>
+        @endif
+    </section>
+    @endif
 </x-dashboard.layout>

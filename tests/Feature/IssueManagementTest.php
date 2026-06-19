@@ -73,10 +73,10 @@ class IssueManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('data-backlog-row');
-        $response->assertSee('data-toggle-for="' . $epic->id . '"');
-        $response->assertSee('data-toggle-for="' . $story->id . '"');
-        $response->assertSee('data-parent-id="' . $epic->id . '"');
-        $response->assertSee('data-parent-id="' . $story->id . '"');
+        $response->assertSeeHtml('data-toggle-for="' . $epic->id . '"');
+        $response->assertSeeHtml('data-toggle-for="' . $story->id . '"');
+        $response->assertSeeHtml('data-parent-id="' . $epic->id . '"');
+        $response->assertSeeHtml('data-parent-id="' . $story->id . '"');
     }
 
     public function test_user_can_create_issue_without_team_or_assignee(): void
@@ -668,6 +668,70 @@ class IssueManagementTest extends TestCase
         $response = $this->actingAs($otherUser)->get(route('projects.issues.index', $project));
 
         $response->assertForbidden();
+    }
+
+    public function test_user_can_delete_issue_without_children(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $issue = $this->createIssue($project, $owner, [
+            'key' => 'CP-9',
+            'title' => 'Remove onboarding flow',
+        ]);
+
+        $response = $this->actingAs($owner)->delete(route('projects.issues.destroy', [$project, $issue]));
+
+        $response->assertRedirect(route('projects.issues.index', $project));
+        $this->assertDatabaseMissing('issues', ['id' => $issue->id]);
+        $this->assertDatabaseHas('activity_logs', [
+            'project_id' => $project->id,
+            'user_id' => $owner->id,
+            'action' => 'deleted issue',
+        ]);
+    }
+
+    public function test_user_cannot_delete_issue_with_children(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $epic = Issue::create([
+            'project_id' => $project->id,
+            'reporter_id' => $owner->id,
+            'key' => 'CP-10',
+            'title' => 'Parent Epic',
+            'type' => 'epic',
+            'status' => 'backlog',
+            'priority' => 'medium',
+        ]);
+        Issue::create([
+            'project_id' => $project->id,
+            'reporter_id' => $owner->id,
+            'key' => 'CP-11',
+            'title' => 'Child Story',
+            'type' => 'story',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'parent_issue_id' => $epic->id,
+            'story_points' => 3,
+        ]);
+
+        $response = $this->actingAs($owner)->from(route('projects.issues.show', [$project, $epic]))
+            ->delete(route('projects.issues.destroy', [$project, $epic]));
+
+        $response->assertRedirect(route('projects.issues.show', [$project, $epic]));
+        $response->assertSessionHasErrors('issue');
+        $this->assertDatabaseHas('issues', ['id' => $epic->id]);
+    }
+
+    public function test_viewer_cannot_delete_issue(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $viewer = User::factory()->create();
+        $this->addProjectMember($project, $viewer, 'viewer');
+        $issue = $this->createIssue($project, $owner);
+
+        $response = $this->actingAs($viewer)->delete(route('projects.issues.destroy', [$project, $issue]));
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('issues', ['id' => $issue->id]);
     }
 
     private function createProjectWithOwner(): array

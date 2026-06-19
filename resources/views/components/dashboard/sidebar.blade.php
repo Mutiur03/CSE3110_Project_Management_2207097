@@ -20,6 +20,9 @@
     $isSprintsActive = request()->routeIs('projects.sprints.*');
     $isBoardActive = request()->routeIs('projects.board.*');
     $isActivityActive = request()->routeIs('projects.activity.*');
+    $isSettingsActive = request()->routeIs('projects.settings.*');
+    $isProfileActive = request()->routeIs('profile.*');
+    $canManageProject = $currentProject?->userCanManage($currentUser) ?? false;
 @endphp
 
 <aside id="dashboard-sidebar"
@@ -147,19 +150,35 @@
                 </svg>
                 Activity
             </a>
+
+            @if ($canManageProject)
+                <a href="{{ route('projects.settings.edit', $currentProject) }}" wire:navigate
+                    class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isSettingsActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
+                    <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9.594 3.94a2.25 2.25 0 0 1 3.182 0l1.036 1.036a2.25 2.25 0 0 0 3.182 0l1.036-1.036a2.25 2.25 0 0 1 3.182 0l1.036 1.036a2.25 2.25 0 0 0 3.182 0M4.5 20.25h15a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5h-15a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
+                    </svg>
+                    Settings
+                </a>
+            @endif
         @endif
     </nav>
 
     <div class="mt-4 border-t border-neutral-200 pt-4">
         <div class="flex w-full items-center gap-3 rounded-lg px-2 py-2">
-            <span class="grid size-9 shrink-0 place-items-center rounded-full bg-black text-xs font-bold text-white">
-                {{ $userInitials ?: 'U' }}
-            </span>
+            <a href="{{ route('profile.edit', $currentProject ? ['project' => $currentProject->id] : []) }}" wire:navigate
+                class="flex min-w-0 flex-1 items-center gap-3 rounded-md transition hover:bg-neutral-100 {{ $isProfileActive ? 'bg-neutral-100' : '' }}">
+                <span class="grid size-9 shrink-0 place-items-center rounded-full bg-black text-xs font-bold text-white">
+                    {{ $userInitials ?: 'U' }}
+                </span>
 
-            <span class="min-w-0 flex-1">
-                <span class="block truncate text-sm font-semibold text-neutral-950">{{ $userName }}</span>
-                <span class="block truncate text-xs text-neutral-500">ScrumLab workspace</span>
-            </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate text-sm font-semibold text-neutral-950">{{ $userName }}</span>
+                    <span class="block truncate text-xs text-neutral-500">View profile</span>
+                </span>
+            </a>
 
             <form method="POST" action="{{ route('logout') }}">
                 @csrf

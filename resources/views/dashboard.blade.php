@@ -25,6 +25,10 @@
     ];
 @endphp
 
+@php
+    $canWriteDashboard = $hasProject && $currentProject->userCanWrite(auth()->user());
+@endphp
+
 <x-dashboard.layout title="Dashboard" eyebrow="Project workspace" :current-project="$currentProject" :projects="$projects">
     @if (! $hasProject)
         <div class="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
@@ -48,6 +52,17 @@
             @endforeach
         </div>
     @else
+        @if ($currentProject->status === 'archived')
+            <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                This project is archived. Work is read-only until a project owner or scrum master reactivates it
+                @if ($currentProject->userCanManage(auth()->user()))
+                    in <a href="{{ route('projects.settings.edit', $currentProject) }}" wire:navigate class="font-semibold underline-offset-4 hover:underline">settings</a>.
+                @else
+                    from project settings.
+                @endif
+            </div>
+        @endif
+
         <div class="mb-6 grid gap-4 xl:grid-cols-[1fr_22rem]">
             <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -74,10 +89,12 @@
                                 </select>
                             </form>
                         @endif
+                        @if ($canWriteDashboard)
                         <a href="{{ route('projects.issues.create', $currentProject) }}" wire:navigate
                             class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                             Create issue
                         </a>
+                        @endif
                     </div>
                 </div>
             </section>

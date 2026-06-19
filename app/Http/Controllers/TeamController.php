@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
 use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\Team;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +16,8 @@ use Illuminate\Validation\Rule;
 
 class TeamController extends Controller
 {
+    use AuthorizesProjectMembership;
+
     public function index(Request $request, Project $project): View
     {
         $this->authorizeProjectAccess($request, $project);
@@ -34,7 +38,7 @@ class TeamController extends Controller
 
     public function store(Request $request, Project $project): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
 
         $validated = $request->validate([
             'name' => [
@@ -70,7 +74,7 @@ class TeamController extends Controller
 
     public function addMember(Request $request, Project $project, Team $team): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         abort_unless($team->project_id === $project->id, 404);
 
         $validated = $request->validate([
@@ -124,21 +128,58 @@ class TeamController extends Controller
             ->with('status', 'Team member added.');
     }
 
-    private function authorizeProjectAccess(Request $request, Project $project): void
+    public function removeMember(Request $request, Project $project, Team $team, User $user): RedirectResponse
     {
-        abort_unless(
-            $project->owner_id === $request->user()->id
-                || $project->members()->where('users.id', $request->user()->id)->exists(),
-            403
-        );
+        $this->authorizeProjectWrite($request, $project);
+        abort_unless($team->project_id === $project->id, 404);
+        abort_unless($team->members()->where('users.id', $user->id)->exists(), 404);
+
+        DB::table('team_members')
+            ->where('team_id', $team->id)
+            ->where('user_id', $user->id)
+            ->delete();
+
+        ActivityLog::create([
+            'project_id' => $project->id,
+            'user_id' => $request->user()->id,
+            'action' => 'removed team member',
+            'subject_type' => Team::class,
+            'subject_id' => $team->id,
+            'old_values' => [
+                'team' => $team->name,
+                'member' => $user->email,
+            ],
+        ]);
+
+        return redirect()
+            ->route('projects.teams.index', $project)
+            ->with('status', 'Team member removed.');
     }
 
-    private function userProjects(Request $request)
+    public function destroy(Request $request, Project $project, Team $team): RedirectResponse
     {
-        return Project::query()
-            ->where('owner_id', $request->user()->id)
-            ->orWhereHas('members', fn ($query) => $query->where('users.id', $request->user()->id))
-            ->orderBy('name')
-            ->get();
+        $this->authorizeProjectWrite($request, $project);
+        abort_unless($team->project_id === $project->id, 404);
+
+        $teamName = $team->name;
+        $issuesUnassigned = $team->issues()->count();
+
+        ActivityLog::create([
+            'project_id' => $project->id,
+            'user_id' => $request->user()->id,
+            'action' => 'deleted team',
+            'subject_type' => Team::class,
+            'subject_id' => $team->id,
+            'old_values' => [
+                'name' => $teamName,
+                'issues_unassigned' => $issuesUnassigned,
+            ],
+        ]);
+
+        $team->delete();
+
+        return redirect()
+            ->route('projects.teams.index', $project)
+            ->with('status', "{$teamName} deleted.");
     }
 }

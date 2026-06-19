@@ -52,4 +52,31 @@ class Project extends Model
     {
         return $this->hasMany(ActivityLog::class);
     }
+
+    public function userMemberRole(User $user): ?string
+    {
+        if ($this->owner_id === $user->id) {
+            return 'project_owner';
+        }
+
+        return $this->members()
+            ->where('users.id', $user->id)
+            ->first()
+            ?->pivot
+            ?->role;
+    }
+
+    public function userCanWrite(User $user): bool
+    {
+        if ($this->status === 'archived') {
+            return false;
+        }
+
+        return in_array($this->userMemberRole($user), ['project_owner', 'scrum_master', 'developer'], true);
+    }
+
+    public function userCanManage(User $user): bool
+    {
+        return in_array($this->userMemberRole($user), ['project_owner', 'scrum_master'], true);
+    }
 }

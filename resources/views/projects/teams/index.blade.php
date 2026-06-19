@@ -1,4 +1,7 @@
 <x-dashboard.layout title="Teams" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
+    @php
+        $canWrite = $currentProject->userCanWrite(auth()->user());
+    @endphp
     <div class="grid gap-6 xl:grid-cols-[1fr_22rem]">
         <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -13,10 +16,12 @@
                     </p>
                 </div>
                 <div class="flex gap-2">
+                    @if ($canWrite)
                     <button type="button" data-modal-target="create-team-modal"
                         class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                         Create team
                     </button>
+                    @endif
                     <a href="{{ route('dashboard', ['project' => $currentProject->id]) }}" wire:navigate
                         class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
                         Back
@@ -31,6 +36,7 @@
         </aside>
     </div>
 
+    @if ($canWrite)
     <x-dashboard.modal id="create-team-modal" title="Create team">
         <form method="POST" action="{{ route('projects.teams.store', $currentProject) }}" class="space-y-4">
                 @csrf
@@ -59,6 +65,7 @@
                 </button>
         </form>
     </x-dashboard.modal>
+    @endif
 
     <div class="mt-6">
         @if ($teams->isEmpty())
@@ -92,6 +99,16 @@
                                             <p class="truncate text-sm font-semibold text-neutral-950">{{ $member->name }}</p>
                                             <p class="truncate text-xs text-neutral-500">{{ $member->pivot->role }}</p>
                                         </div>
+                                        @if ($canWrite)
+                                            <form method="POST" action="{{ route('projects.teams.members.destroy', [$currentProject, $team, $member]) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                    class="rounded-md px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50">
+                                                    Remove
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 @empty
                                     <p class="rounded-md border border-dashed border-neutral-300 bg-stone-50 p-3 text-sm text-neutral-600">
@@ -101,6 +118,7 @@
                             </div>
                         </div>
 
+                        @if ($canWrite)
                         <div class="mt-5 border-t border-neutral-200 pt-4">
                             <button type="button" data-modal-target="add-team-member-{{ $team->id }}"
                                 class="rounded-md bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
@@ -137,6 +155,28 @@
                             </button>
                             </form>
                         </x-dashboard.modal>
+
+                        <div class="mt-5 border-t border-neutral-200 pt-4">
+                            <h4 class="text-sm font-bold text-neutral-950">Delete team</h4>
+                            <p class="mt-1 text-xs leading-5 text-neutral-500">
+                                @if ($team->issues_count > 0)
+                                    {{ $team->issues_count }} linked {{ str('issue')->plural($team->issues_count) }} will become unassigned from this team.
+                                @else
+                                    Remove this team from the project.
+                                @endif
+                            </p>
+                            <form method="POST" action="{{ route('projects.teams.destroy', [$currentProject, $team]) }}"
+                                class="mt-3"
+                                onsubmit="return confirm('Delete {{ $team->name }}? This cannot be undone.')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                    class="rounded-md px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50">
+                                    Delete team
+                                </button>
+                            </form>
+                        </div>
+                        @endif
                     </article>
                 @endforeach
             </div>

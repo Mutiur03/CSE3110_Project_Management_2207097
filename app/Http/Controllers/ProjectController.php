@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
 use App\Models\ActivityLog;
 use App\Models\Project;
 use Illuminate\Contracts\View\View;
@@ -9,16 +10,15 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
 {
+    use AuthorizesProjectMembership;
+
     public function create(Request $request): View
     {
-        $projects = Project::query()
-            ->where('owner_id', $request->user()->id)
-            ->orWhereHas('members', fn ($query) => $query->where('users.id', $request->user()->id))
-            ->orderBy('name')
-            ->get();
+        $projects = $this->userProjects($request);
 
         return view('projects.create', [
             'projects' => $projects,
@@ -72,6 +72,49 @@ class ProjectController extends Controller
         return redirect()
             ->route('dashboard', ['project' => $project->id])
             ->with('status', 'Project created.');
+    }
+
+    public function edit(Request $request, Project $project): View
+    {
+        $this->authorizeProjectManagement($request, $project);
+
+        return view('projects.settings.edit', [
+            'projects' => $this->userProjects($request),
+            'currentProject' => $project,
+        ]);
+    }
+
+    public function update(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorizeProjectManagement($request, $project);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'status' => ['required', Rule::in(['active', 'archived'])],
+        ]);
+
+        $oldValues = $project->only(['name', 'description', 'status']);
+
+        $project->update([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'status' => $validated['status'],
+        ]);
+
+        ActivityLog::create([
+            'project_id' => $project->id,
+            'user_id' => $request->user()->id,
+            'action' => 'updated project',
+            'subject_type' => Project::class,
+            'subject_id' => $project->id,
+            'old_values' => $oldValues,
+            'new_values' => $project->only(['name', 'description', 'status']),
+        ]);
+
+        return redirect()
+            ->route('projects.settings.edit', $project)
+            ->with('status', 'Project settings saved.');
     }
 
     private function generateProjectKey(string $name): string

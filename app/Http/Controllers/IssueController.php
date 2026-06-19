@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
 use App\Models\ActivityLog;
 use App\Models\Issue;
 use App\Models\Project;
@@ -15,6 +16,8 @@ use Illuminate\Validation\Rule;
 
 class IssueController extends Controller
 {
+    use AuthorizesProjectMembership;
+
     public function index(Request $request, Project $project): View
     {
         $this->authorizeProjectAccess($request, $project);
@@ -66,7 +69,7 @@ class IssueController extends Controller
 
     public function create(Request $request, Project $project): View
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
 
         return view('projects.issues.create', [
             'projects' => $this->userProjects($request),
@@ -79,7 +82,7 @@ class IssueController extends Controller
 
     public function store(Request $request, Project $project): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
 
         $validated = $this->validateIssue($request, $project);
 
@@ -150,7 +153,7 @@ class IssueController extends Controller
 
     public function update(Request $request, Project $project, Issue $issue): RedirectResponse
     {
-        $this->authorizeProjectAccess($request, $project);
+        $this->authorizeProjectWrite($request, $project);
         $this->assertIssueBelongsToProject($issue, $project);
 
         $validated = $this->validateIssue($request, $project, $issue);
@@ -202,6 +205,37 @@ class IssueController extends Controller
         return redirect()
             ->route('projects.issues.show', ['project' => $project, 'issue' => $issue])
             ->with('status', 'Issue updated.');
+    }
+
+    public function destroy(Request $request, Project $project, Issue $issue): RedirectResponse
+    {
+        $this->authorizeProjectWrite($request, $project);
+        $this->assertIssueBelongsToProject($issue, $project);
+
+        if ($issue->childIssues()->exists()) {
+            return redirect()
+                ->route('projects.issues.show', [$project, $issue])
+                ->withErrors([
+                    'issue' => 'Remove or reassign child issues before deleting this issue.',
+                ]);
+        }
+
+        $deletedIssue = $issue->only(['id', 'key', 'title', 'type']);
+
+        ActivityLog::create([
+            'project_id' => $project->id,
+            'user_id' => $request->user()->id,
+            'action' => 'deleted issue',
+            'subject_type' => Issue::class,
+            'subject_id' => $issue->id,
+            'old_values' => $deletedIssue,
+        ]);
+
+        $issue->delete();
+
+        return redirect()
+            ->route('projects.issues.index', $project)
+            ->with('status', "{$deletedIssue['key']} deleted.");
     }
 
     private function rules(Project $project, ?Issue $issue = null, ?string $type = null): array
@@ -300,27 +334,9 @@ class IssueController extends Controller
         return $project->key . '-' . ($lastNumber + 1);
     }
 
-    private function authorizeProjectAccess(Request $request, Project $project): void
-    {
-        abort_unless(
-            $project->owner_id === $request->user()->id
-                || $project->members()->where('users.id', $request->user()->id)->exists(),
-            403
-        );
-    }
-
     private function assertIssueBelongsToProject(Issue $issue, Project $project): void
     {
         abort_unless($issue->project_id === $project->id, 404);
-    }
-
-    private function userProjects(Request $request)
-    {
-        return Project::query()
-            ->where('owner_id', $request->user()->id)
-            ->orWhereHas('members', fn ($query) => $query->where('users.id', $request->user()->id))
-            ->orderBy('name')
-            ->get();
     }
 
     private function projectMembersWithTeams(Project $project)

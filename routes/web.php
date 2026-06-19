@@ -9,6 +9,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IssueController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectActivityController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
@@ -31,22 +32,30 @@ Route::middleware('guest')->group(function () {
 
 Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'no_back_history'])->name('dashboard');
 Route::middleware(['auth', 'no_back_history'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
     Route::post('/notifications/read', [NotificationController::class, 'markAllRead'])->name('notifications.read');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::get('/projects/{project}/settings', [ProjectController::class, 'edit'])->name('projects.settings.edit');
+    Route::patch('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
     Route::get('/projects/{project}/members', [ProjectMemberController::class, 'index'])->name('projects.members.index');
     Route::post('/projects/{project}/members', [ProjectMemberController::class, 'store'])->name('projects.members.store');
     Route::patch('/projects/{project}/members/{user}', [ProjectMemberController::class, 'update'])->name('projects.members.update');
     Route::delete('/projects/{project}/members/{user}', [ProjectMemberController::class, 'destroy'])->name('projects.members.destroy');
     Route::get('/projects/{project}/teams', [TeamController::class, 'index'])->name('projects.teams.index');
     Route::post('/projects/{project}/teams', [TeamController::class, 'store'])->name('projects.teams.store');
+    Route::delete('/projects/{project}/teams/{team}', [TeamController::class, 'destroy'])->name('projects.teams.destroy');
     Route::post('/projects/{project}/teams/{team}/members', [TeamController::class, 'addMember'])->name('projects.teams.members.store');
+    Route::delete('/projects/{project}/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('projects.teams.members.destroy');
     Route::get('/projects/{project}/issues', [IssueController::class, 'index'])->name('projects.issues.index');
     Route::get('/projects/{project}/issues/create', [IssueController::class, 'create'])->name('projects.issues.create');
     Route::post('/projects/{project}/issues', [IssueController::class, 'store'])->name('projects.issues.store');
     Route::get('/projects/{project}/issues/{issue}', [IssueController::class, 'show'])->name('projects.issues.show');
     Route::patch('/projects/{project}/issues/{issue}', [IssueController::class, 'update'])->name('projects.issues.update');
+    Route::delete('/projects/{project}/issues/{issue}', [IssueController::class, 'destroy'])->name('projects.issues.destroy');
     Route::post('/projects/{project}/issues/{issue}/comments', [CommentController::class, 'store'])->name('projects.issues.comments.store');
     Route::delete('/projects/{project}/issues/{issue}/comments/{comment}', [CommentController::class, 'destroy'])->name('projects.issues.comments.destroy');
     Route::get('/projects/{project}/sprints', [SprintController::class, 'index'])->name('projects.sprints.index');
