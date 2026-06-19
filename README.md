@@ -11,6 +11,8 @@
 
 ScrumLab uses Laravel's database-backed authentication and password reset broker.
 
+The project database structure is documented in the [ScrumLab ER diagram](ER_DIAGRAM.md).
+
 Run the app:
 
 ```bash
