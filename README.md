@@ -7,23 +7,214 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
-## ScrumLab Setup
+## ScrumLab Setup (Windows + Oracle)
 
-ScrumLab uses Laravel's database-backed authentication and password reset broker.
+ScrumLab is a Laravel project management app that uses **Oracle Database** and **PL/SQL** for coursework. PHPUnit still uses SQLite so `php artisan test` works without Oracle.
 
-Run the app:
+### What you need installed
 
-```bash
+| Software | Purpose | Download |
+|----------|---------|----------|
+| **XAMPP** (PHP 8.2, 64-bit) | PHP, Apache (optional) | [apachefriends.org](https://www.apachefriends.org/) |
+| **Composer** | PHP dependencies | [getcomposer.org](https://getcomposer.org/download/) |
+| **Node.js** (LTS) | Frontend build (Vite) | [nodejs.org](https://nodejs.org/) |
+| **Git** | Clone the repo | [git-scm.com](https://git-scm.com/) |
+| **Oracle Database** | Data storage | XE 21c or school server (see below) |
+| **Oracle Instant Client 19+** | PHP OCI8 libraries | [Instant Client downloads](https://www.oracle.com/database/technologies/instant-client/winx64-64-downloads.html) |
+| **SQL Developer** (optional) | Run PL/SQL scripts | [SQL Developer](https://www.oracle.com/database/sqldeveloper/) |
+| **Visual C++ Redistributable** | Required by Instant Client | [Microsoft VC++ Redist](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) |
+
+---
+
+### Step 1 — Install Oracle Database
+
+**Option A: Oracle Database XE 21c (local, free)**
+
+1. Download [Oracle Database 21c XE for Windows](https://www.oracle.com/database/technologies/xe-downloads.html).
+2. Run the installer and note:
+   - **Port:** `1521` (default)
+   - **Service name:** often `XE` (or `XEPDB1` for the pluggable DB — check your install)
+3. After install, open **SQL*Plus** or SQL Developer as `SYSTEM` and create an app user:
+
+```sql
+CREATE USER scrumlab IDENTIFIED BY your_password;
+GRANT CONNECT, RESOURCE TO scrumlab;
+GRANT UNLIMITED TABLESPACE TO scrumlab;
+```
+
+**Option B: School Oracle server**
+
+Use the host, port, service name, username, and password from your teacher.
+
+---
+
+### Step 2 — One-time PHP + Oracle setup (any new Windows PC)
+
+MySQL works out of the box in XAMPP. Oracle needs a **one-time** PHP setup on each machine. After that, you only edit `.env` — same as MySQL.
+
+From the project folder, run:
+
+```powershell
+composer run setup-oracle
+```
+
+This script will:
+
+1. Enable `extension=oci8_19` in your `php.ini`
+2. Download Oracle Instant Client 19 if it is not already present
+3. Copy the required DLLs into your PHP folder (so old Oracle 11.2 on PATH does not break OCI8)
+4. Verify `oci8` loads with no warnings
+
+**Manual fallback** (if the script cannot download):
+
+```powershell
+# 1. Enable in php.ini: extension=oci8_19
+# 2. Extract Instant Client to C:\oracle\instantclient_19_31
+Copy-Item "C:\oracle\instantclient_19_31\*.dll" "C:\xampp\php\" -Force
+php -m | findstr oci8
+```
+
+---
+
+### Step 3 — Clone and configure the project
+
+```powershell
+git clone <your-repo-url> Project_Management
+cd Project_Management
 composer install
-cp .env.example .env
+composer run setup-oracle
+copy .env.example .env
+```
+
+Edit `.env` with your Oracle credentials:
+
+```env
+DB_CONNECTION=oracle
+DB_HOST=127.0.0.1
+DB_PORT=1521
+DB_DATABASE=SCRUMLAB
+DB_SERVICE_NAME=XE
+DB_USERNAME=scrumlab
+DB_PASSWORD=your_password
+DB_CHARSET=AL32UTF8
+DB_SERVER_VERSION=21c
+```
+
+| Variable | Meaning |
+|----------|---------|
+| `DB_HOST` | Oracle server IP or `127.0.0.1` for local XE |
+| `DB_PORT` | Usually `1521` |
+| `DB_SERVICE_NAME` | `XE` for XE, or value from your DBA |
+| `DB_USERNAME` / `DB_PASSWORD` | App user (e.g. `scrumlab`) |
+| `DB_DATABASE` | Often same as username or a TNS alias |
+
+Generate the app key and clear config cache:
+
+```powershell
 php artisan key:generate
+php artisan config:clear
+```
+
+---
+
+### Step 4 — Create tables and sample data
+
+```powershell
 php artisan migrate --seed
+```
+
+This creates all ScrumLab tables (users, projects, issues, sprints, etc.) in Oracle.
+
+If migration fails:
+- Check Oracle listener is running (Windows Services → `OracleServiceXE` or similar).
+- Test login in SQL Developer with the same user/password.
+- Run `php artisan config:clear` after any `.env` change.
+
+---
+
+### Step 5 — Deploy PL/SQL (course requirement)
+
+1. Open **SQL Developer** (or SQL*Plus).
+2. Connect as your app user (`scrumlab`).
+3. Open `database/oracle/scrum_plsql.sql` from this project.
+4. Run the script (F5 in SQL Developer).
+
+This creates:
+- **`scrum_pkg`** — function `count_open_issues` and procedure `update_issue_status`
+- **`trg_project_members_role_chk`** — trigger that validates project member roles
+
+Verify in SQL Developer:
+
+```sql
+SELECT object_name, object_type
+FROM user_objects
+WHERE object_type IN ('PACKAGE', 'TRIGGER')
+ORDER BY object_name;
+```
+
+Demo the function (use a real project UUID from the `projects` table):
+
+```sql
+SELECT scrum_pkg.count_open_issues(id) AS open_issues, name
+FROM projects;
+```
+
+---
+
+### Step 6 — Build frontend and run the app
+
+```powershell
 npm install
 npm run build
+composer run dev
+```
+
+Or just the backend:
+
+```powershell
 php artisan serve
 ```
 
-Password reset emails use `MAIL_MAILER=log` by default, so local reset links are written to `storage/logs/laravel.log`. Set `APP_URL` to the URL users open in their browser, then configure SMTP values in `.env` for real email delivery.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+**Default seeded login** (after `migrate --seed`): `test@example.com` / `password`
+
+---
+
+### Step 7 — Run tests
+
+Tests use SQLite (configured in `phpunit.xml`), not Oracle:
+
+```powershell
+php artisan test
+```
+
+---
+
+### Quick checklist (new machine)
+
+- [ ] XAMPP PHP 8.2, Composer, Node.js installed
+- [ ] Oracle DB running, app user created
+- [ ] `composer run setup-oracle` — shows `oci8 is ready`
+- [ ] `php -m` shows `oci8`
+- [ ] `.env` has correct `DB_*` values
+- [ ] `php artisan migrate --seed` succeeds
+- [ ] `database/oracle/scrum_plsql.sql` executed in SQL Developer
+- [ ] `npm run build` and `php artisan serve` — app loads in browser
+
+---
+
+### Troubleshooting
+
+| Error | Fix |
+|-------|-----|
+| `Undefined constant OCI_DEFAULT` | Run `composer run setup-oracle` on this machine |
+| `The specified procedure could not be found` | Same — run `composer run setup-oracle` (copies correct DLLs into PHP folder) |
+| `ORA-12541: TNS:no listener` | Start Oracle service; check `DB_HOST` / `DB_PORT` |
+| `ORA-01017: invalid username/password` | Fix `DB_USERNAME` / `DB_PASSWORD` in `.env` |
+| `ORA-00942: table or view does not exist` | Run `php artisan migrate` first |
+| `ORA-04043: object SCRUM_PKG does not exist` | Run `database/oracle/scrum_plsql.sql` |
+| Config changes ignored | `php artisan config:clear` |
 
 ## About Laravel
 

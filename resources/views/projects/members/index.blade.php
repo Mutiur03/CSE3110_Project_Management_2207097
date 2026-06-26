@@ -4,6 +4,7 @@
         'scrum_master' => 'Scrum master',
         'developer' => 'Developer',
         'viewer' => 'Viewer',
+        'admin' => 'Admin',
     ];
     $canManage = $currentProject->userCanManage(auth()->user());
 @endphp

@@ -82,7 +82,7 @@ class TeamController extends Controller
                 'required',
                 Rule::exists('project_members', 'user_id')->where('project_id', $project->id),
             ],
-            'role' => ['required', 'string', 'max:60'],
+            'role' => ['required', Rule::in(['project_owner', 'scrum_master', 'developer', 'viewer', 'admin'])],
         ]);
 
         $existingMember = DB::table('team_members')

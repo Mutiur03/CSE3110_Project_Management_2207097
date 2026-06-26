@@ -38,7 +38,7 @@ class ProjectMemberController extends Controller
 
         $validated = $request->validate([
             'email' => ['required', 'email', Rule::exists('users', 'email')],
-            'role' => ['required', Rule::in(['project_owner', 'scrum_master', 'developer', 'viewer'])],
+            'role' => ['required', Rule::in(['project_owner', 'scrum_master', 'developer', 'viewer', 'admin'])],
         ], [
             'email.exists' => 'That email is not registered yet. Ask the user to create an account first, then add them to the project.',
         ]);
@@ -84,7 +84,7 @@ class ProjectMemberController extends Controller
         abort_unless($project->members()->where('users.id', $user->id)->exists(), 404);
 
         $validated = $request->validate([
-            'role' => ['required', Rule::in(['project_owner', 'scrum_master', 'developer', 'viewer'])],
+            'role' => ['required', Rule::in(['project_owner', 'scrum_master', 'developer', 'viewer', 'admin'])],
         ]);
 
         DB::table('project_members')

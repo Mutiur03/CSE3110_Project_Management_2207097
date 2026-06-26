@@ -72,11 +72,13 @@ class Project extends Model
             return false;
         }
 
-        return in_array($this->userMemberRole($user), ['project_owner', 'scrum_master', 'developer'], true);
+        $role = $this->userMemberRole($user);
+        return in_array($role, ['project_owner', 'scrum_master', 'developer', 'admin'], true);
     }
 
     public function userCanManage(User $user): bool
     {
-        return in_array($this->userMemberRole($user), ['project_owner', 'scrum_master'], true);
+        $role = $this->userMemberRole($user);
+        return in_array($role, ['project_owner', 'scrum_master', 'admin'], true);
     }
 }
