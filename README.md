@@ -123,13 +123,9 @@ php artisan config:clear
 php artisan migrate --seed
 ```
 
-If you already migrated with older CLOB columns, run:
+Migrations use **raw Oracle SQL** (`DB::unprepared`) for tables, foreign keys, and PL/SQL objects (`count_open_issues` function, `update_issue_status` procedure, `trg_project_members_role_chk` trigger). Bug-report columns are included in the main `issues` table migration.
 
-```powershell
-php artisan migrate
-```
-
-That applies `2026_06_27_000001_convert_oracle_clob_columns_to_varchar` to convert existing CLOB fields to `VARCHAR2` for equality checks and tests.
+The same PL/SQL is also saved in `database/oracle/scrum_plsql.sql` if you want to run or inspect it in SQL Developer.
 
 If migration fails:
 - Check Oracle listener is running (Windows Services → `OracleServiceXE` or similar).
@@ -138,31 +134,38 @@ If migration fails:
 
 ---
 
-### Step 5 — Deploy PL/SQL (course requirement)
+### Step 5 — PL/SQL (course requirement)
 
-1. Open **SQL Developer** (or SQL*Plus).
-2. Connect as your app user (`scrumlab`).
-3. Open `database/oracle/scrum_plsql.sql` from this project.
-4. Run the script (F5 in SQL Developer).
+`php artisan migrate` already creates:
 
-This creates:
-- **`scrum_pkg`** — function `count_open_issues` and procedure `update_issue_status`
+- **`count_open_issues`** — function that counts non-done issues for a project
+- **`update_issue_status`** — procedure that updates an issue status
 - **`trg_project_members_role_chk`** — trigger that validates project member roles
+
+Optional: open `database/oracle/scrum_plsql.sql` in SQL Developer to review or re-run the same objects manually.
 
 Verify in SQL Developer:
 
 ```sql
 SELECT object_name, object_type
 FROM user_objects
-WHERE object_type IN ('PACKAGE', 'TRIGGER')
+WHERE object_type IN ('FUNCTION', 'PROCEDURE', 'TRIGGER')
 ORDER BY object_name;
 ```
 
 Demo the function (use a real project UUID from the `projects` table):
 
 ```sql
-SELECT scrum_pkg.count_open_issues(id) AS open_issues, name
+SELECT id, name, count_open_issues(id) AS open_issues
 FROM projects;
+```
+
+Demo the procedure:
+
+```sql
+BEGIN
+    update_issue_status('issue-uuid-here', 'done');
+END;
 ```
 
 ---
@@ -206,8 +209,7 @@ php artisan test
 - [ ] `composer run setup-oracle` — shows `oci8 is ready`
 - [ ] `php -m` shows `oci8`
 - [ ] `.env` has correct `DB_*` values
-- [ ] `php artisan migrate --seed` succeeds
-- [ ] `database/oracle/scrum_plsql.sql` executed in SQL Developer
+- [ ] `php artisan migrate --seed` succeeds (tables + PL/SQL)
 - [ ] `npm run build` and `php artisan serve` — app loads in browser
 
 ---
@@ -221,7 +223,7 @@ php artisan test
 | `ORA-12541: TNS:no listener` | Start Oracle service; check `DB_HOST` / `DB_PORT` |
 | `ORA-01017: invalid username/password` | Fix `DB_USERNAME` / `DB_PASSWORD` in `.env` |
 | `ORA-00942: table or view does not exist` | Run `php artisan migrate` first |
-| `ORA-04043: object SCRUM_PKG does not exist` | Run `database/oracle/scrum_plsql.sql` |
+| `ORA-04043: object does not exist` | Run `php artisan migrate` to create function, procedure, and trigger |
 | Config changes ignored | `php artisan config:clear` |
 
 ## About Laravel

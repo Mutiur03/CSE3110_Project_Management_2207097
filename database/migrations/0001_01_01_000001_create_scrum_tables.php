@@ -1,125 +1,203 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('projects', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('owner_id')->constrained('users')->cascadeOnDelete();
-            $table->string('name');
-            $table->string('key')->unique();
-            $table->string('description', 1000)->nullable();
-            $table->string('status')->default('active');
-            $table->timestamps();
-        });
+        DB::unprepared("
+            CREATE TABLE projects (
+                id VARCHAR2(36) NOT NULL,
+                owner_id VARCHAR2(36) NOT NULL,
+                name VARCHAR2(255) NOT NULL,
+                key VARCHAR2(255) NOT NULL,
+                description VARCHAR2(1000) NULL,
+                status VARCHAR2(255) DEFAULT 'active' NOT NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT projects_pk PRIMARY KEY (id),
+                CONSTRAINT projects_key_uk UNIQUE (key),
+                CONSTRAINT projects_owner_id_fk FOREIGN KEY (owner_id)
+                    REFERENCES users (id) ON DELETE CASCADE
+            )
+        ");
 
-        Schema::create('project_members', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('role')->default('developer');
-            $table->timestamp('joined_at')->nullable();
-            $table->timestamps();
+        DB::unprepared("
+            CREATE TABLE project_members (
+                id VARCHAR2(36) NOT NULL,
+                project_id VARCHAR2(36) NOT NULL,
+                user_id VARCHAR2(36) NOT NULL,
+                role VARCHAR2(255) DEFAULT 'developer' NOT NULL,
+                joined_at TIMESTAMP NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT project_members_pk PRIMARY KEY (id),
+                CONSTRAINT pm_proj_user_uk UNIQUE (project_id, user_id),
+                CONSTRAINT pm_project_id_fk FOREIGN KEY (project_id)
+                    REFERENCES projects (id) ON DELETE CASCADE,
+                CONSTRAINT pm_user_id_fk FOREIGN KEY (user_id)
+                    REFERENCES users (id) ON DELETE CASCADE
+            )
+        ");
 
-            $table->unique(['project_id', 'user_id']);
-        });
+        DB::unprepared("
+            CREATE TABLE teams (
+                id VARCHAR2(36) NOT NULL,
+                project_id VARCHAR2(36) NOT NULL,
+                name VARCHAR2(255) NOT NULL,
+                description VARCHAR2(1000) NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT teams_pk PRIMARY KEY (id),
+                CONSTRAINT teams_project_name_uk UNIQUE (project_id, name),
+                CONSTRAINT teams_project_id_fk FOREIGN KEY (project_id)
+                    REFERENCES projects (id) ON DELETE CASCADE
+            )
+        ");
 
-        Schema::create('teams', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->string('name');
-            $table->string('description', 1000)->nullable();
-            $table->timestamps();
+        DB::unprepared("
+            CREATE TABLE team_members (
+                id VARCHAR2(36) NOT NULL,
+                team_id VARCHAR2(36) NOT NULL,
+                user_id VARCHAR2(36) NOT NULL,
+                role VARCHAR2(255) DEFAULT 'developer' NOT NULL,
+                joined_at TIMESTAMP NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT team_members_pk PRIMARY KEY (id),
+                CONSTRAINT tm_team_user_uk UNIQUE (team_id, user_id),
+                CONSTRAINT tm_team_id_fk FOREIGN KEY (team_id)
+                    REFERENCES teams (id) ON DELETE CASCADE,
+                CONSTRAINT tm_user_id_fk FOREIGN KEY (user_id)
+                    REFERENCES users (id) ON DELETE CASCADE
+            )
+        ");
 
-            $table->unique(['project_id', 'name']);
-        });
+        DB::unprepared("
+            CREATE TABLE sprints (
+                id VARCHAR2(36) NOT NULL,
+                project_id VARCHAR2(36) NOT NULL,
+                name VARCHAR2(255) NOT NULL,
+                goal VARCHAR2(1000) NULL,
+                start_date DATE NULL,
+                end_date DATE NULL,
+                status VARCHAR2(255) DEFAULT 'planned' NOT NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT sprints_pk PRIMARY KEY (id),
+                CONSTRAINT sprints_project_id_fk FOREIGN KEY (project_id)
+                    REFERENCES projects (id) ON DELETE CASCADE
+            )
+        ");
 
-        Schema::create('team_members', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('team_id')->constrained('teams')->cascadeOnDelete();
-            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('role')->default('developer');
-            $table->timestamp('joined_at')->nullable();
-            $table->timestamps();
+        DB::unprepared("
+            CREATE TABLE issues (
+                id VARCHAR2(36) NOT NULL,
+                project_id VARCHAR2(36) NOT NULL,
+                team_id VARCHAR2(36) NULL,
+                sprint_id VARCHAR2(36) NULL,
+                reporter_id VARCHAR2(36) NOT NULL,
+                assignee_id VARCHAR2(36) NULL,
+                parent_issue_id VARCHAR2(36) NULL,
+                key VARCHAR2(255) NOT NULL,
+                title VARCHAR2(255) NOT NULL,
+                description VARCHAR2(4000) NULL,
+                type VARCHAR2(255) DEFAULT 'task' NOT NULL,
+                status VARCHAR2(255) DEFAULT 'backlog' NOT NULL,
+                priority VARCHAR2(255) DEFAULT 'medium' NOT NULL,
+                story_points NUMBER(5) NULL,
+                severity VARCHAR2(255) NULL,
+                steps_to_reproduce VARCHAR2(4000) NULL,
+                expected_result VARCHAR2(4000) NULL,
+                actual_result VARCHAR2(4000) NULL,
+                environment VARCHAR2(255) NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT issues_pk PRIMARY KEY (id),
+                CONSTRAINT issues_key_uk UNIQUE (key),
+                CONSTRAINT issues_project_id_fk FOREIGN KEY (project_id)
+                    REFERENCES projects (id) ON DELETE CASCADE,
+                CONSTRAINT issues_team_id_fk FOREIGN KEY (team_id)
+                    REFERENCES teams (id) ON DELETE SET NULL,
+                CONSTRAINT issues_sprint_id_fk FOREIGN KEY (sprint_id)
+                    REFERENCES sprints (id) ON DELETE SET NULL,
+                CONSTRAINT issues_reporter_id_fk FOREIGN KEY (reporter_id)
+                    REFERENCES users (id) ON DELETE CASCADE,
+                CONSTRAINT issues_assignee_id_fk FOREIGN KEY (assignee_id)
+                    REFERENCES users (id) ON DELETE SET NULL,
+                CONSTRAINT issues_parent_fk FOREIGN KEY (parent_issue_id)
+                    REFERENCES issues (id) ON DELETE SET NULL
+            )
+        ");
 
-            $table->unique(['team_id', 'user_id']);
-        });
+        DB::unprepared("
+            CREATE TABLE comments (
+                id VARCHAR2(36) NOT NULL,
+                issue_id VARCHAR2(36) NOT NULL,
+                user_id VARCHAR2(36) NOT NULL,
+                body VARCHAR2(4000) NOT NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT comments_pk PRIMARY KEY (id),
+                CONSTRAINT comments_issue_id_fk FOREIGN KEY (issue_id)
+                    REFERENCES issues (id) ON DELETE CASCADE,
+                CONSTRAINT comments_user_id_fk FOREIGN KEY (user_id)
+                    REFERENCES users (id) ON DELETE CASCADE
+            )
+        ");
 
-        Schema::create('sprints', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->string('name');
-            $table->string('goal', 1000)->nullable();
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->string('status')->default('planned');
-            $table->timestamps();
-        });
+        DB::unprepared("
+            CREATE TABLE activity_logs (
+                id VARCHAR2(36) NOT NULL,
+                project_id VARCHAR2(36) NULL,
+                issue_id VARCHAR2(36) NULL,
+                user_id VARCHAR2(36) NULL,
+                action VARCHAR2(255) NOT NULL,
+                subject_type VARCHAR2(255) NULL,
+                subject_id VARCHAR2(36) NULL,
+                old_values VARCHAR2(4000) NULL,
+                new_values VARCHAR2(4000) NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT activity_logs_pk PRIMARY KEY (id),
+                CONSTRAINT al_project_id_fk FOREIGN KEY (project_id)
+                    REFERENCES projects (id) ON DELETE CASCADE,
+                CONSTRAINT al_issue_id_fk FOREIGN KEY (issue_id)
+                    REFERENCES issues (id) ON DELETE CASCADE,
+                CONSTRAINT al_user_id_fk FOREIGN KEY (user_id)
+                    REFERENCES users (id) ON DELETE SET NULL
+            )
+        ");
 
-        Schema::create('issues', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->foreignUuid('team_id')->nullable()->constrained('teams')->nullOnDelete();
-            $table->foreignUuid('sprint_id')->nullable()->constrained('sprints')->nullOnDelete();
-            $table->foreignUuid('reporter_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignUuid('assignee_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignUuid('parent_issue_id')->nullable()->constrained('issues')->nullOnDelete();
-            $table->string('key')->unique();
-            $table->string('title');
-            $table->string('description', 4000)->nullable();
-            $table->string('type')->default('task');
-            $table->string('status')->default('backlog');
-            $table->string('priority')->default('medium');
-            $table->unsignedSmallInteger('story_points')->nullable();
-            $table->timestamps();
-        });
+        DB::unprepared("
+            CREATE TABLE notifications (
+                id VARCHAR2(36) NOT NULL,
+                type VARCHAR2(255) NOT NULL,
+                notifiable_type VARCHAR2(255) NOT NULL,
+                notifiable_id VARCHAR2(36) NOT NULL,
+                data VARCHAR2(4000) NOT NULL,
+                read_at TIMESTAMP NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT notifications_pk PRIMARY KEY (id)
+            )
+        ");
 
-        Schema::create('comments', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('issue_id')->constrained('issues')->cascadeOnDelete();
-            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('body', 4000);
-            $table->timestamps();
-        });
-
-        Schema::create('activity_logs', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('project_id')->nullable()->constrained('projects')->cascadeOnDelete();
-            $table->foreignUuid('issue_id')->nullable()->constrained('issues')->cascadeOnDelete();
-            $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('action');
-            $table->string('subject_type')->nullable();
-            $table->uuid('subject_id')->nullable();
-            $table->string('old_values', 4000)->nullable();
-            $table->string('new_values', 4000)->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('notifications', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('type');
-            $table->uuidMorphs('notifiable');
-            $table->string('data', 4000);
-            $table->timestamp('read_at')->nullable();
-            $table->timestamps();
-        });
+        DB::unprepared('CREATE INDEX notif_notifiable_idx ON notifications (notifiable_type, notifiable_id)');
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('notifications');
-        Schema::dropIfExists('activity_logs');
-        Schema::dropIfExists('comments');
-        Schema::dropIfExists('issues');
-        Schema::dropIfExists('sprints');
-        Schema::dropIfExists('team_members');
-        Schema::dropIfExists('teams');
-        Schema::dropIfExists('project_members');
-        Schema::dropIfExists('projects');
+        DB::unprepared('DROP TABLE notifications CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE activity_logs CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE comments CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE issues CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE sprints CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE team_members CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE teams CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE project_members CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE projects CASCADE CONSTRAINTS');
     }
 };

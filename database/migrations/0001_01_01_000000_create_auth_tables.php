@@ -1,45 +1,59 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->string('avatar')->nullable();
-            $table->string('job_title')->nullable();
-            $table->rememberToken();
-            $table->timestamps();
-        });
+        DB::unprepared("
+            CREATE TABLE users (
+                id VARCHAR2(36) NOT NULL,
+                name VARCHAR2(255) NOT NULL,
+                email VARCHAR2(255) NOT NULL,
+                email_verified_at TIMESTAMP NULL,
+                password VARCHAR2(255) NOT NULL,
+                avatar VARCHAR2(255) NULL,
+                job_title VARCHAR2(255) NULL,
+                remember_token VARCHAR2(100) NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                CONSTRAINT users_pk PRIMARY KEY (id),
+                CONSTRAINT users_email_uk UNIQUE (email)
+            )
+        ");
 
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
-            $table->string('token');
-            $table->timestamp('created_at')->nullable();
-        });
+        DB::unprepared("
+            CREATE TABLE password_reset_tokens (
+                email VARCHAR2(255) NOT NULL,
+                token VARCHAR2(255) NOT NULL,
+                created_at TIMESTAMP NULL,
+                CONSTRAINT password_reset_tokens_pk PRIMARY KEY (email)
+            )
+        ");
 
-        Schema::create('sessions', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->longText('payload');
-            $table->integer('last_activity')->index();
-        });
+        DB::unprepared("
+            CREATE TABLE sessions (
+                id VARCHAR2(255) NOT NULL,
+                user_id VARCHAR2(36) NULL,
+                ip_address VARCHAR2(45) NULL,
+                user_agent VARCHAR2(4000) NULL,
+                payload CLOB NOT NULL,
+                last_activity NUMBER(10) NOT NULL,
+                CONSTRAINT sessions_pk PRIMARY KEY (id),
+                CONSTRAINT sessions_user_id_fk FOREIGN KEY (user_id)
+                    REFERENCES users (id) ON DELETE SET NULL
+            )
+        ");
+
+        DB::unprepared('CREATE INDEX sessions_last_activity_idx ON sessions (last_activity)');
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('sessions');
-        Schema::dropIfExists('password_reset_tokens');
-        Schema::dropIfExists('users');
+        DB::unprepared('DROP TABLE sessions CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE password_reset_tokens CASCADE CONSTRAINTS');
+        DB::unprepared('DROP TABLE users CASCADE CONSTRAINTS');
     }
 };
