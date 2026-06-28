@@ -22,7 +22,7 @@
     $isActivityActive = request()->routeIs('projects.activity.*');
     $isSettingsActive = request()->routeIs('projects.settings.*');
     $isProfileActive = request()->routeIs('profile.*');
-    $canManageProject = $currentProject?->userCanManage($currentUser) ?? false;
+    $canManageProject = (bool) ($currentProject->can_manage ?? false);
 @endphp
 
 <aside id="dashboard-sidebar"
@@ -56,9 +56,9 @@
                 <div class="py-1.5">
                     @foreach ($projects as $project)
                         <a href="{{ route('dashboard', ['project' => $project->id]) }}" wire:navigate
-                            class="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition hover:bg-neutral-100 {{ $project->is($currentProject) ? 'text-neutral-950' : 'text-neutral-700' }}">
+                            class="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition hover:bg-neutral-100 {{ $currentProject && $project->id === $currentProject->id ? 'text-neutral-950' : 'text-neutral-700' }}">
                             <span class="min-w-0 flex-1 truncate">{{ $project->name }}</span>
-                            @if ($project->is($currentProject))
+                            @if ($currentProject && $project->id === $currentProject->id)
                                 <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none"
                                     viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
@@ -92,7 +92,7 @@
         </a>
 
         @if ($currentProject)
-            <a href="{{ route('projects.members.index', $currentProject) }}" wire:navigate
+            <a href="{{ route('projects.members.index', $currentProject->id) }}" wire:navigate
                 class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isMembersActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                     stroke-width="1.8" stroke="currentColor">
@@ -102,7 +102,7 @@
                 Members
             </a>
 
-            <a href="{{ route('projects.teams.index', $currentProject) }}" wire:navigate
+            <a href="{{ route('projects.teams.index', $currentProject->id) }}" wire:navigate
                 class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isTeamsActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                     stroke-width="1.8" stroke="currentColor">
@@ -112,7 +112,7 @@
                 Teams
             </a>
 
-            <a href="{{ route('projects.issues.index', $currentProject) }}" wire:navigate
+            <a href="{{ route('projects.issues.index', $currentProject->id) }}" wire:navigate
                 class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isIssuesActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                     stroke-width="1.8" stroke="currentColor">
@@ -122,7 +122,7 @@
                 Issues
             </a>
 
-            <a href="{{ route('projects.sprints.index', $currentProject) }}" wire:navigate
+            <a href="{{ route('projects.sprints.index', $currentProject->id) }}" wire:navigate
                 class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isSprintsActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                     stroke-width="1.8" stroke="currentColor">
@@ -132,7 +132,7 @@
                 Sprints
             </a>
 
-            <a href="{{ route('projects.board.index', $currentProject) }}" wire:navigate
+            <a href="{{ route('projects.board.index', $currentProject->id) }}" wire:navigate
                 class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isBoardActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                     stroke-width="1.8" stroke="currentColor">
@@ -141,7 +141,7 @@
                 Board
             </a>
 
-            <a href="{{ route('projects.activity.index', $currentProject) }}" wire:navigate
+            <a href="{{ route('projects.activity.index', $currentProject->id) }}" wire:navigate
                 class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isActivityActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                     stroke-width="1.8" stroke="currentColor">
@@ -152,7 +152,7 @@
             </a>
 
             @if ($canManageProject)
-                <a href="{{ route('projects.settings.edit', $currentProject) }}" wire:navigate
+                <a href="{{ route('projects.settings.edit', $currentProject->id) }}" wire:navigate
                     class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-semibold transition {{ $isSettingsActive ? 'bg-neutral-950 text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950' }}">
                     <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.8" stroke="currentColor">

@@ -2,20 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
+use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
+    use AuthorizesProjectMembership;
+
     public function edit(Request $request): View
     {
+        $projects = $this->userProjects($request);
+
         return view('profile.edit', [
             'user' => $request->user(),
-            'projects' => $this->userProjects($request),
-            'currentProject' => $this->currentProject($request),
+            'projects' => $projects,
+            'currentProject' => $projects->firstWhere('id', $request->query('project')) ?? $projects->first(),
         ]);
     }
 
@@ -25,9 +31,10 @@ class ProfileController extends Controller
             'name' => ['required', 'string', 'max:120'],
         ]);
 
-        $request->user()->update([
-            'name' => $validated['name'],
-        ]);
+        DB::update(
+            'UPDATE users SET name = ?, updated_at = ? WHERE id = ?',
+            [$validated['name'], now()->toDateTimeString(), $request->user()->id],
+        );
 
         return redirect()
             ->route('profile.edit')
@@ -41,30 +48,13 @@ class ProfileController extends Controller
             'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
-        $request->user()->update([
-            'password' => $validated['password'],
-        ]);
+        DB::update(
+            'UPDATE users SET password = ?, updated_at = ? WHERE id = ?',
+            [Hash::make($validated['password']), now()->toDateTimeString(), $request->user()->id],
+        );
 
         return redirect()
             ->route('profile.edit')
             ->with('status', 'Password updated.');
-    }
-
-    private function userProjects(Request $request)
-    {
-        $user = $request->user();
-
-        return Project::query()
-            ->where('owner_id', $user->id)
-            ->orWhereHas('members', fn ($query) => $query->where('users.id', $user->id))
-            ->orderBy('name')
-            ->get();
-    }
-
-    private function currentProject(Request $request): ?Project
-    {
-        $projects = $this->userProjects($request);
-
-        return $projects->firstWhere('id', $request->query('project')) ?? $projects->first();
     }
 }

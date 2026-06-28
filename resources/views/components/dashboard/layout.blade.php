@@ -6,19 +6,42 @@
 ])
 
 @php
-    $globalIssueMembers = $currentProject
-        ? $currentProject->members()
-            ->with(['teams' => fn ($query) => $query->where('project_id', $currentProject->id)])
-            ->orderBy('name')
-            ->get()
-        : collect();
-    $globalIssueTeams = $currentProject
-        ? $currentProject->teams()->orderBy('name')->get()
-        : collect();
-    $globalParentIssues = $currentProject
-        ? $currentProject->issues()->whereIn('type', ['epic', 'story', 'task'])->orderBy('key')->get()
-        : collect();
-    $canWriteProject = $currentProject?->userCanWrite(auth()->user()) ?? false;
+    use App\Support\SqlDialect;
+    use Illuminate\Support\Facades\DB;
+
+    $globalIssueMembers = collect();
+    $globalIssueTeams = collect();
+    $globalParentIssues = collect();
+    $canWriteProject = false;
+
+    if ($currentProject) {
+        $canWriteProject = (bool) ($currentProject->can_write ?? false);
+
+        $globalIssueMembers = collect(DB::select(
+            'SELECT u.id, u.name, u.email,
+                    '.SqlDialect::groupConcat('t.id').'
+             FROM users u
+             INNER JOIN project_members pm ON pm.user_id = u.id
+             LEFT JOIN team_members tm ON tm.user_id = u.id
+             LEFT JOIN teams t ON t.id = tm.team_id AND t.project_id = ?
+             WHERE pm.project_id = ?
+             GROUP BY u.id, u.name, u.email
+             ORDER BY u.name',
+            [$currentProject->id, $currentProject->id],
+        ));
+
+        $globalIssueTeams = collect(DB::select(
+            'SELECT id, name FROM teams WHERE project_id = ? ORDER BY name',
+            [$currentProject->id],
+        ));
+
+        $globalParentIssues = collect(DB::select(
+            "SELECT id, key, title, type FROM issues
+             WHERE project_id = ? AND type IN ('epic', 'story', 'task')
+             ORDER BY key",
+            [$currentProject->id],
+        ));
+    }
 @endphp
 
 <x-layout>
@@ -96,7 +119,7 @@
 
         @if ($currentProject && $canWriteProject)
             <x-dashboard.modal id="global-create-issue-modal" title="Create backlog item" :open="old('_form') === 'global-create-issue'">
-                <form method="POST" action="{{ route('projects.issues.store', $currentProject) }}">
+                <form method="POST" action="{{ route('projects.issues.store', $currentProject->id) }}">
                     @csrf
                     <input type="hidden" name="_form" value="global-create-issue">
 
@@ -106,7 +129,7 @@
                         'teams' => $globalIssueTeams,
                         'parentIssues' => $globalParentIssues,
                         'submitLabel' => 'Create backlog item',
-                        'cancelUrl' => route('projects.issues.index', $currentProject),
+                        'cancelUrl' => route('projects.issues.index', $currentProject->id),
                         'modalCancel' => true,
                         'fieldPrefix' => 'global-issue',
                     ])

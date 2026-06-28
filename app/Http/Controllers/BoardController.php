@@ -3,28 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
-use App\Models\ActivityLog;
-use App\Models\Issue;
-use App\Models\Project;
-use App\Notifications\ProjectEventNotification;
+use App\Support\SqlDialect;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class BoardController extends Controller
 {
     use AuthorizesProjectMembership;
 
-    public function index(Request $request, Project $project): View
+    public function index(Request $request, string $project): View
     {
-        $this->authorizeProjectAccess($request, $project);
+        $currentProject = $this->authorizeProjectAccess($request, $project);
 
-        $activeSprint = $project->sprints()
-            ->where('status', 'active')
-            ->with(['issues.assignee', 'issues.team'])
-            ->latest('start_date')
-            ->first();
+        $activeSprint = SqlDialect::normalizeSprint(DB::selectOne(
+            "SELECT s.* FROM sprints s
+             WHERE s.project_id = ? AND s.status = 'active'
+             ORDER BY s.start_date DESC
+            ",
+            [$project],
+        ));
 
         $workflow = [
             'selected' => 'Selected',
@@ -33,9 +33,23 @@ class BoardController extends Controller
             'done' => 'Done',
         ];
 
-        $issuesByStatus = $activeSprint
-            ? $activeSprint->issues->groupBy('status')
-            : collect();
+        $issuesByStatus = collect();
+
+        if ($activeSprint) {
+            $issues = SqlDialect::mapIssues(DB::select(
+                'SELECT i.*,
+                        assignee.name AS assignee_name,
+                        team.name AS team_name
+                 FROM issues i
+                 LEFT JOIN users assignee ON assignee.id = i.assignee_id
+                 LEFT JOIN teams team ON team.id = i.team_id
+                 WHERE i.sprint_id = ?
+                 ORDER BY i.key',
+                [$activeSprint->id],
+            ));
+            $activeSprint->issues = $issues;
+            $issuesByStatus = $issues->groupBy('status');
+        }
 
         $columns = collect($workflow)->map(fn ($label, $status) => [
             'status' => $status,
@@ -45,53 +59,66 @@ class BoardController extends Controller
 
         return view('projects.board.index', [
             'projects' => $this->userProjects($request),
-            'currentProject' => $project,
+            'currentProject' => $currentProject,
             'activeSprint' => $activeSprint,
             'columns' => $columns,
             'workflow' => $workflow,
         ]);
     }
 
-    public function updateIssueStatus(Request $request, Project $project, Issue $issue): RedirectResponse
+    public function updateIssueStatus(Request $request, string $project, string $issue): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        abort_unless($issue->project_id === $project->id, 404);
+
+        $issueRow = DB::selectOne(
+            'SELECT id, key, project_id, sprint_id, status, reporter_id, assignee_id
+             FROM issues WHERE id = ? AND project_id = ?',
+            [$issue, $project],
+        );
+        abort_if($issueRow === null, 404);
 
         $validated = $request->validate([
             'status' => ['required', Rule::in(['selected', 'in_progress', 'review', 'done'])],
         ]);
 
-        $activeSprint = $project->sprints()
-            ->where('status', 'active')
-            ->first();
+        $activeSprint = DB::selectOne(
+            "SELECT id FROM sprints WHERE project_id = ? AND status = 'active'",
+            [$project],
+        );
 
-        abort_unless($activeSprint && $issue->sprint_id === $activeSprint->id, 422);
+        abort_unless($activeSprint && $issueRow->sprint_id === $activeSprint->id, 422);
 
-        $oldStatus = $issue->status;
-        $issue->update(['status' => $validated['status']]);
+        $oldStatus = $issueRow->status;
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'issue_id' => $issue->id,
-            'user_id' => $request->user()->id,
-            'action' => 'changed issue status',
-            'subject_type' => Issue::class,
-            'subject_id' => $issue->id,
-            'old_values' => ['status' => $oldStatus],
-            'new_values' => ['status' => $issue->status],
-        ]);
+        DB::update(
+            'UPDATE issues SET status = ?, updated_at = ? WHERE id = ?',
+            [$validated['status'], now()->toDateTimeString(), $issue],
+        );
 
-        $issue->loadMissing(['reporter', 'assignee']);
-        collect([$issue->reporter, $issue->assignee])
-            ->filter()
-            ->unique('id')
-            ->each(fn ($user) => (new ProjectEventNotification(
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'changed issue status',
+            'App\Models\Issue',
+            $issue,
+            $issue,
+            oldValues: ['status' => $oldStatus],
+            newValues: ['status' => $validated['status']],
+        );
+
+        $userIds = collect([$issueRow->reporter_id, $issueRow->assignee_id])->filter()->unique()->values()->all();
+        $url = route('projects.issues.show', [$project, $issue]);
+
+        foreach ($userIds as $userId) {
+            $this->pushNotification(
+                $userId,
                 'Issue status changed',
-                "{$issue->key} moved from {$oldStatus} to {$issue->status}.",
-                route('projects.issues.show', [$project, $issue]),
-                $project->id,
-                $issue->id,
-            ))->sendTo($user));
+                "{$issueRow->key} moved from {$oldStatus} to {$validated['status']}.",
+                $url,
+                $project,
+                $issue,
+            );
+        }
 
         return redirect()
             ->route('projects.board.index', $project)

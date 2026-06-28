@@ -29,7 +29,7 @@
     $standaloneTasks = $rootIssues->where('type', 'task');
     $standaloneBugs = $rootIssues->where('type', 'bug');
     $standaloneSubtasks = $rootIssues->where('type', 'subtask');
-    $canWrite = $currentProject->userCanWrite(auth()->user());
+    $canWrite = (bool) ($currentProject->can_write ?? false);
 @endphp
 
 <x-dashboard.layout title="Issues" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -49,7 +49,7 @@
     </section>
 
     <section class="mt-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-        <form method="GET" action="{{ route('projects.issues.index', $currentProject) }}" class="grid gap-3 lg:grid-cols-[1.6fr_repeat(5,1fr)_auto]">
+        <form method="GET" action="{{ route('projects.issues.index', $currentProject->id) }}" class="grid gap-3 lg:grid-cols-[1.6fr_repeat(5,1fr)_auto]">
             <label>
                 <span class="sr-only">Search issues</span>
                 <input name="q" type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Search key or title"
@@ -93,7 +93,7 @@
 
             <div class="flex gap-2">
                 <button type="submit" class="rounded-md bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800">Filter</button>
-                <a href="{{ route('projects.issues.index', $currentProject) }}" wire:navigate
+                <a href="{{ route('projects.issues.index', $currentProject->id) }}" wire:navigate
                     class="rounded-md border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">Clear</a>
             </div>
         </form>
@@ -101,7 +101,7 @@
 
     @if ($canWrite)
     <x-dashboard.modal id="create-issue-modal" title="Create issue">
-        <form method="POST" action="{{ route('projects.issues.store', $currentProject) }}">
+        <form method="POST" action="{{ route('projects.issues.store', $currentProject->id) }}">
             @csrf
 
             @include('projects.issues.partials.form', [
@@ -110,7 +110,7 @@
                 'teams' => $teams,
                 'parentIssues' => $parentIssues,
                 'submitLabel' => 'Create issue',
-                'cancelUrl' => route('projects.issues.index', $currentProject),
+                'cancelUrl' => route('projects.issues.index', $currentProject->id),
                 'modalCancel' => true,
                 'fieldPrefix' => 'page-create-issue',
             ])

@@ -29,7 +29,7 @@
         'bug' => 'M9 9h6m-7 4h8m-4-9v3m-5 1-2-2m14 0-2 2m-10 8-2 2m14 0-2-2M8 8a4 4 0 0 1 8 0v7a4 4 0 0 1-8 0V8z',
     ];
 
-    $initials = collect(explode(' ', $issue->reporter?->name ?? 'User'))
+    $initials = collect(explode(' ', $issue->reporter_name ?? 'User'))
         ->filter()
         ->take(2)
         ->map(fn ($part) => substr($part, 0, 1))
@@ -57,12 +57,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $typeIcons[$issue->type] ?? $typeIcons['task'] }}" />
             </svg>
 
-            <a href="{{ route('projects.issues.show', [$currentProject, $issue]) }}" wire:navigate
+            <a href="{{ route('projects.issues.show', [$currentProject->id, $issue->id]) }}" wire:navigate
                 class="shrink-0 font-semibold text-blue-600 underline-offset-4 hover:underline">
                 {{ $issue->key }}
             </a>
 
-            <a href="{{ route('projects.issues.show', [$currentProject, $issue]) }}" wire:navigate
+            <a href="{{ route('projects.issues.show', [$currentProject->id, $issue->id]) }}" wire:navigate
                 class="min-w-0 flex-1 truncate font-semibold text-neutral-950">
                 {{ $issue->title }}
             </a>
@@ -80,14 +80,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.5 20.25a7.5 7.5 0 0 1 15 0" />
             </svg>
         </span>
-        <span class="truncate font-medium">{{ $issue->assignee?->name ?? 'Unassigned' }}</span>
+        <span class="truncate font-medium">{{ $issue->assignee_name ?? 'Unassigned' }}</span>
     </div>
 
     <div class="flex min-w-0 items-center gap-2 border-r border-neutral-100 px-3 py-2.5">
         <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
             {{ strtoupper($initials) }}
         </span>
-        <span class="truncate font-medium">{{ $issue->reporter?->name ?? 'Unknown' }}</span>
+        <span class="truncate font-medium">{{ $issue->reporter_name ?? 'Unknown' }}</span>
     </div>
 
     <div class="flex items-center gap-2 border-r border-neutral-100 px-3 py-2.5">

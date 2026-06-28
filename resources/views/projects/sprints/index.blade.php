@@ -14,7 +14,7 @@
     ];
 
     $activeSprint = $sprints->firstWhere('status', 'active');
-    $canWrite = $currentProject->userCanWrite(auth()->user());
+    $canWrite = (bool) ($currentProject->can_write ?? false);
 @endphp
 
 <x-dashboard.layout title="Sprints" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -38,7 +38,7 @@
                         Create sprint
                     </button>
                     @endif
-                    <a href="{{ route('projects.issues.index', $currentProject) }}" wire:navigate
+                    <a href="{{ route('projects.issues.index', $currentProject->id) }}" wire:navigate
                         class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
                         Backlog
                     </a>
@@ -58,7 +58,7 @@
 
     @if ($canWrite)
     <x-dashboard.modal id="create-sprint-modal" title="Create sprint">
-        <form method="POST" action="{{ route('projects.sprints.store', $currentProject) }}" class="space-y-4">
+        <form method="POST" action="{{ route('projects.sprints.store', $currentProject->id) }}" class="space-y-4">
                 @csrf
 
                 <div>
@@ -132,7 +132,7 @@
                         </button>
 
                         @if ($sprint->status !== 'active')
-                            <form method="POST" action="{{ route('projects.sprints.start', [$currentProject, $sprint]) }}"
+                            <form method="POST" action="{{ route('projects.sprints.start', [$currentProject->id, $sprint->id]) }}"
                                 @if ($activeSprint)
                                     onsubmit="return confirm(@js($activeSprint->name . ' is already active. Starting ' . $sprint->name . ' will move ' . $activeSprint->name . ' back to planned. Continue?'))"
                                 @endif>
@@ -149,7 +149,7 @@
                         @endif
 
                         @if ($sprint->status !== 'completed')
-                            <form method="POST" action="{{ route('projects.sprints.complete', [$currentProject, $sprint]) }}">
+                            <form method="POST" action="{{ route('projects.sprints.complete', [$currentProject->id, $sprint->id]) }}">
                                 @csrf
                                 <button type="submit"
                                     class="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
@@ -163,7 +163,7 @@
 
                 @if ($canWrite)
                 <x-dashboard.modal id="edit-sprint-{{ $sprint->id }}" title="Edit {{ $sprint->name }}">
-                    <form method="POST" action="{{ route('projects.sprints.update', [$currentProject, $sprint]) }}" class="space-y-4">
+                    <form method="POST" action="{{ route('projects.sprints.update', [$currentProject->id, $sprint->id]) }}" class="space-y-4">
                         @csrf
                         @method('PATCH')
 
@@ -215,10 +215,10 @@
                                             @endif
                                         </div>
                                         <p class="mt-2 truncate text-sm font-semibold text-neutral-950">{{ $issue->title }}</p>
-                                        <p class="mt-1 text-xs text-neutral-500">{{ $issue->assignee?->name ?? 'Unassigned' }} · {{ $issue->team?->name ?? 'No team' }}</p>
+                                        <p class="mt-1 text-xs text-neutral-500">{{ $issue->assignee_name ?? 'Unassigned' }} · {{ $issue->team_name ?? 'No team' }}</p>
                                     </div>
                                     @if ($canWrite && $sprint->status !== 'completed')
-                                        <form method="POST" action="{{ route('projects.sprints.issues.destroy', [$currentProject, $sprint, $issue]) }}">
+                                        <form method="POST" action="{{ route('projects.sprints.issues.destroy', [$currentProject->id, $sprint->id, $issue->id]) }}">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="rounded-md px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50">
@@ -236,7 +236,7 @@
                     </div>
 
                     @if ($canWrite && $sprint->status !== 'completed')
-                        <form method="POST" action="{{ route('projects.sprints.issues.store', [$currentProject, $sprint]) }}"
+                        <form method="POST" action="{{ route('projects.sprints.issues.store', [$currentProject->id, $sprint->id]) }}"
                             class="rounded-lg border border-neutral-200 bg-stone-50 p-4">
                             @csrf
 

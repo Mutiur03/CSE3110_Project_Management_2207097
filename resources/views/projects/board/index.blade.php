@@ -14,7 +14,7 @@
         'urgent' => 'bg-rose-100 text-rose-700',
     ];
 
-    $canWrite = $currentProject->userCanWrite(auth()->user());
+    $canWrite = (bool) ($currentProject->can_write ?? false);
 @endphp
 
 <x-dashboard.layout title="Board" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -32,7 +32,7 @@
                     Drag cards between columns or use move buttons. Backlog items appear after they are selected into an active sprint.
                 </p>
             </div>
-            <a href="{{ route('projects.sprints.index', $currentProject) }}" wire:navigate
+            <a href="{{ route('projects.sprints.index', $currentProject->id) }}" wire:navigate
                 class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
                 Manage sprints
             </a>
@@ -59,7 +59,7 @@
                                     'rounded-lg border border-neutral-200 bg-white p-4 shadow-sm transition',
                                     'cursor-grab active:cursor-grabbing' => $canWrite,
                                 ])>
-                                <form method="POST" action="{{ route('projects.board.issues.status', [$currentProject, $issue]) }}" data-board-drop-form>
+                                <form method="POST" action="{{ route('projects.board.issues.status', [$currentProject->id, $issue->id]) }}" data-board-drop-form>
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="{{ $issue->status }}" data-board-status-input>
@@ -72,7 +72,7 @@
                                     </span>
                                 </div>
 
-                                <a href="{{ route('projects.issues.show', [$currentProject, $issue]) }}" wire:navigate
+                                <a href="{{ route('projects.issues.show', [$currentProject->id, $issue->id]) }}" wire:navigate
                                     class="mt-3 block text-sm font-bold leading-5 text-neutral-950 underline-offset-4 hover:underline">
                                     {{ $issue->title }}
                                 </a>
@@ -89,13 +89,13 @@
                                     @endif
                                 </div>
 
-                                <p class="mt-2 text-xs text-neutral-500">{{ $issue->assignee?->name ?? 'Unassigned' }} / {{ $issue->team?->name ?? 'No team' }}</p>
+                                <p class="mt-2 text-xs text-neutral-500">{{ $issue->assignee_name ?? 'Unassigned' }} / {{ $issue->team_name ?? 'No team' }}</p>
 
                                 @if ($canWrite)
                                 <div class="mt-4 grid gap-2">
                                     @foreach ($workflow as $status => $label)
                                         @if ($status !== $issue->status)
-                                            <form method="POST" action="{{ route('projects.board.issues.status', [$currentProject, $issue]) }}">
+                                            <form method="POST" action="{{ route('projects.board.issues.status', [$currentProject->id, $issue->id]) }}">
                                                 @csrf
                                                 @method('PATCH')
                                                 <input type="hidden" name="status" value="{{ $status }}">

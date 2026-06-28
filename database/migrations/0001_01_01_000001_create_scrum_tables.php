@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignUuid('owner_id')->constrained('users')->cascadeOnDelete();
             $table->string('name');
             $table->string('key')->unique();
-            $table->text('description')->nullable();
+            $table->string('description', 1000)->nullable();
             $table->string('status')->default('active');
             $table->timestamps();
         });
@@ -33,7 +33,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('project_id')->constrained('projects')->cascadeOnDelete();
             $table->string('name');
-            $table->text('description')->nullable();
+            $table->string('description', 1000)->nullable();
             $table->timestamps();
 
             $table->unique(['project_id', 'name']);
@@ -54,7 +54,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('project_id')->constrained('projects')->cascadeOnDelete();
             $table->string('name');
-            $table->text('goal')->nullable();
+            $table->string('goal', 1000)->nullable();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->string('status')->default('planned');
@@ -71,7 +71,7 @@ return new class extends Migration
             $table->foreignUuid('parent_issue_id')->nullable()->constrained('issues')->nullOnDelete();
             $table->string('key')->unique();
             $table->string('title');
-            $table->text('description')->nullable();
+            $table->string('description', 4000)->nullable();
             $table->string('type')->default('task');
             $table->string('status')->default('backlog');
             $table->string('priority')->default('medium');
@@ -83,7 +83,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('issue_id')->constrained('issues')->cascadeOnDelete();
             $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
-            $table->text('body');
+            $table->string('body', 4000);
             $table->timestamps();
         });
 
@@ -95,8 +95,8 @@ return new class extends Migration
             $table->string('action');
             $table->string('subject_type')->nullable();
             $table->uuid('subject_id')->nullable();
-            $table->json('old_values')->nullable();
-            $table->json('new_values')->nullable();
+            $table->string('old_values', 4000)->nullable();
+            $table->string('new_values', 4000)->nullable();
             $table->timestamps();
         });
 
@@ -104,7 +104,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('type');
             $table->uuidMorphs('notifiable');
-            $table->json('data');
+            $table->string('data', 4000);
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });

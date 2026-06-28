@@ -9,7 +9,7 @@
 
 ## ScrumLab Setup (Windows + Oracle)
 
-ScrumLab is a Laravel project management app that uses **Oracle Database** and **PL/SQL** for coursework. PHPUnit still uses SQLite so `php artisan test` works without Oracle.
+ScrumLab is a Laravel project management app that uses **Oracle Database** and **PL/SQL** for coursework. The app, migrations, tests, and raw SQL helpers are all Oracle-only (`yajra/laravel-oci8`).
 
 ### What you need installed
 
@@ -50,7 +50,7 @@ Use the host, port, service name, username, and password from your teacher.
 
 ### Step 2 — One-time PHP + Oracle setup (any new Windows PC)
 
-MySQL works out of the box in XAMPP. Oracle needs a **one-time** PHP setup on each machine. After that, you only edit `.env` — same as MySQL.
+Oracle needs a **one-time** PHP setup on each machine. After that, you only edit `.env`.
 
 From the project folder, run:
 
@@ -123,7 +123,13 @@ php artisan config:clear
 php artisan migrate --seed
 ```
 
-This creates all ScrumLab tables (users, projects, issues, sprints, etc.) in Oracle.
+If you already migrated with older CLOB columns, run:
+
+```powershell
+php artisan migrate
+```
+
+That applies `2026_06_27_000001_convert_oracle_clob_columns_to_varchar` to convert existing CLOB fields to `VARCHAR2` for equality checks and tests.
 
 If migration fails:
 - Check Oracle listener is running (Windows Services → `OracleServiceXE` or similar).
@@ -183,11 +189,13 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ### Step 7 — Run tests
 
-Tests use SQLite (configured in `phpunit.xml`), not Oracle:
+Tests use the same Oracle connection as the app. Ensure `.env` has valid `DB_*` values, then:
 
 ```powershell
 php artisan test
 ```
+
+`RefreshDatabase` runs `migrate:fresh` before each test class, so Oracle must be running and the app user must be able to create/drop tables.
 
 ---
 

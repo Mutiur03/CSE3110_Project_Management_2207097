@@ -3,24 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
-use App\Models\ActivityLog;
-use App\Models\Issue;
-use App\Models\Project;
-use App\Notifications\ProjectEventNotification;
+use App\Support\SqlDialect;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class IssueController extends Controller
 {
     use AuthorizesProjectMembership;
 
-    public function index(Request $request, Project $project): View
+    public function index(Request $request, string $project): View
     {
-        $this->authorizeProjectAccess($request, $project);
+        $currentProject = $this->authorizeProjectAccess($request, $project);
 
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
@@ -29,134 +28,189 @@ class IssueController extends Controller
             'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'urgent'])],
             'assignee_id' => [
                 'nullable',
-                Rule::exists('project_members', 'user_id')->where('project_id', $project->id),
+                Rule::exists('project_members', 'user_id')->where('project_id', $project),
             ],
             'sprint_id' => [
                 'nullable',
-                Rule::exists('sprints', 'id')->where('project_id', $project->id),
+                Rule::exists('sprints', 'id')->where('project_id', $project),
             ],
         ]);
 
-        $issuesQuery = $project->issues()
-            ->with(['assignee', 'reporter', 'team', 'parentIssue'])
-            ->when($filters['q'] ?? null, function ($query, string $search) {
-                $search = trim($search);
+        $sql = 'SELECT i.*,
+                       assignee.name AS assignee_name,
+                       reporter.name AS reporter_name,
+                       team.name AS team_name
+                FROM issues i
+                LEFT JOIN users assignee ON assignee.id = i.assignee_id
+                LEFT JOIN users reporter ON reporter.id = i.reporter_id
+                LEFT JOIN teams team ON team.id = i.team_id
+                WHERE i.project_id = ?';
+        $bindings = [$project];
 
-                $query->where(function ($query) use ($search) {
-                    $query->where('key', 'like', "%{$search}%")
-                        ->orWhere('title', 'like', "%{$search}%");
-                });
-            })
-            ->when($filters['type'] ?? null, fn ($query, string $type) => $query->where('type', $type))
-            ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
-            ->when($filters['priority'] ?? null, fn ($query, string $priority) => $query->where('priority', $priority))
-            ->when($filters['assignee_id'] ?? null, fn ($query, string $assigneeId) => $query->where('assignee_id', $assigneeId))
-            ->when($filters['sprint_id'] ?? null, fn ($query, string $sprintId) => $query->where('sprint_id', $sprintId));
+        if (! empty($filters['q'])) {
+            $search = '%' . trim($filters['q']) . '%';
+            $sql .= ' AND (i.key LIKE ? OR i.title LIKE ?)';
+            $bindings[] = $search;
+            $bindings[] = $search;
+        }
 
-        $issues = $issuesQuery->orderBy('key')->get();
+        if (! empty($filters['type'])) {
+            $sql .= ' AND i.type = ?';
+            $bindings[] = $filters['type'];
+        }
+
+        if (! empty($filters['status'])) {
+            $sql .= ' AND i.status = ?';
+            $bindings[] = $filters['status'];
+        }
+
+        if (! empty($filters['priority'])) {
+            $sql .= ' AND i.priority = ?';
+            $bindings[] = $filters['priority'];
+        }
+
+        if (! empty($filters['assignee_id'])) {
+            $sql .= ' AND i.assignee_id = ?';
+            $bindings[] = $filters['assignee_id'];
+        }
+
+        if (! empty($filters['sprint_id'])) {
+            $sql .= ' AND i.sprint_id = ?';
+            $bindings[] = $filters['sprint_id'];
+        }
+
+        $sql .= ' ORDER BY i.key';
 
         return view('projects.issues.index', [
             'projects' => $this->userProjects($request),
-            'currentProject' => $project,
-            'issues' => $issues,
-            'members' => $this->projectMembersWithTeams($project),
-            'teams' => $project->teams()->orderBy('name')->get(),
-            'sprints' => $project->sprints()->orderByRaw("case status when 'active' then 0 when 'planned' then 1 else 2 end")->latest()->get(),
-            'parentIssues' => $project->issues()->whereIn('type', ['epic', 'story', 'task'])->orderBy('key')->get(),
+            'currentProject' => $currentProject,
+            'issues' => SqlDialect::mapIssues(DB::select($sql, $bindings)),
+            'members' => $this->membersWithTeamIds($project),
+            'teams' => $this->projectTeams($project),
+            'sprints' => $this->projectSprints($project),
+            'parentIssues' => $this->parentIssues($project),
             'filters' => $filters,
         ]);
     }
 
-    public function create(Request $request, Project $project): View
+    public function create(Request $request, string $project): View
     {
-        $this->authorizeProjectWrite($request, $project);
+        $currentProject = $this->authorizeProjectWrite($request, $project);
 
         return view('projects.issues.create', [
             'projects' => $this->userProjects($request),
-            'currentProject' => $project,
-            'members' => $this->projectMembersWithTeams($project),
-            'teams' => $project->teams()->orderBy('name')->get(),
-            'parentIssues' => $project->issues()->whereIn('type', ['epic', 'story', 'task'])->orderBy('key')->get(),
+            'currentProject' => $currentProject,
+            'members' => $this->membersWithTeamIds($project),
+            'teams' => $this->projectTeams($project),
+            'parentIssues' => $this->parentIssues($project),
         ]);
     }
 
-    public function store(Request $request, Project $project): RedirectResponse
+    public function store(Request $request, string $project): RedirectResponse
     {
-        $this->authorizeProjectWrite($request, $project);
+        $currentProject = $this->authorizeProjectWrite($request, $project);
 
         $validated = $this->validateIssue($request, $project);
+        $issueId = (string) Str::uuid();
+        $issueKey = $this->nextIssueKey($project, $currentProject->key);
+        $now = now()->toDateTimeString();
 
-        $issue = Issue::create([
-            ...$validated,
-            'project_id' => $project->id,
-            'reporter_id' => $request->user()->id,
-            'key' => $this->nextIssueKey($project),
-            'team_id' => $validated['team_id'] ?? null,
-            'assignee_id' => $validated['assignee_id'] ?? null,
-            'parent_issue_id' => $validated['parent_issue_id'] ?? null,
-            'story_points' => $validated['story_points'] ?? null,
-        ]);
-
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'issue_id' => $issue->id,
-            'user_id' => $request->user()->id,
-            'action' => 'created issue',
-            'subject_type' => Issue::class,
-            'subject_id' => $issue->id,
-            'new_values' => [
-                'key' => $issue->key,
-                'title' => $issue->title,
-                'status' => $issue->status,
+        DB::insert(
+            'INSERT INTO issues (
+                id, project_id, team_id, sprint_id, reporter_id, assignee_id, parent_issue_id,
+                key, title, description, type, status, priority, story_points,
+                severity, steps_to_reproduce, expected_result, actual_result, environment,
+                created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                $issueId,
+                $project,
+                $validated['team_id'] ?? null,
+                null,
+                $request->user()->id,
+                $validated['assignee_id'] ?? null,
+                $validated['parent_issue_id'] ?? null,
+                $issueKey,
+                $validated['title'],
+                $validated['description'] ?? null,
+                $validated['type'],
+                $validated['status'],
+                $validated['priority'],
+                $validated['story_points'] ?? null,
+                $validated['severity'] ?? null,
+                $validated['steps_to_reproduce'] ?? null,
+                $validated['expected_result'] ?? null,
+                $validated['actual_result'] ?? null,
+                $validated['environment'] ?? null,
+                $now,
+                $now,
             ],
-        ]);
+        );
 
-        $this->notifyAssignee($request, $project, $issue, 'Issue assigned', "{$request->user()->name} assigned {$issue->key} to you.");
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'created issue',
+            'App\Models\Issue',
+            $issueId,
+            $issueId,
+            newValues: [
+                'key' => $issueKey,
+                'title' => $validated['title'],
+                'status' => $validated['status'],
+            ],
+        );
+
+        if (! empty($validated['assignee_id'])) {
+            $this->pushNotification(
+                $validated['assignee_id'],
+                'Issue assigned',
+                "{$request->user()->name} assigned {$issueKey} to you.",
+                route('projects.issues.show', [$project, $issueId]),
+                $project,
+                $issueId,
+            );
+        }
 
         return redirect()
-            ->route('projects.issues.show', ['project' => $project, 'issue' => $issue])
+            ->route('projects.issues.show', ['project' => $project, 'issue' => $issueId])
             ->with('status', 'Issue created.');
     }
 
-    public function show(Request $request, Project $project, Issue $issue): View
+    public function show(Request $request, string $project, string $issue): View
     {
-        $this->authorizeProjectAccess($request, $project);
-        $this->assertIssueBelongsToProject($issue, $project);
+        $currentProject = $this->authorizeProjectAccess($request, $project);
+        $issueRow = $this->fetchIssue($project, $issue);
+        abort_if($issueRow === null, 404);
+
+        $childIssues = $this->issuesWithChildren($project, $issue);
+        $comments = $this->issueComments($issue);
+        $activities = $this->issueActivities($issue);
+
+        $issueRow->childIssues = $childIssues;
+        $issueRow->comments = $comments;
 
         return view('projects.issues.show', [
             'projects' => $this->userProjects($request),
-            'currentProject' => $project,
-            'issue' => $issue->load([
-                'reporter',
-                'assignee',
-                'team',
-                'parentIssue',
-                'comments.user',
-                'activityLogs.user',
-                'activityLogs.issue',
-                'childIssues' => fn ($query) => $query
-                    ->with(['reporter', 'assignee', 'team'])
-                    ->orderBy('key'),
-                'childIssues.childIssues' => fn ($query) => $query
-                    ->with(['reporter', 'assignee', 'team'])
-                    ->orderBy('key'),
-            ]),
-            'members' => $this->projectMembersWithTeams($project),
-            'teams' => $project->teams()->orderBy('name')->get(),
-            'parentIssues' => $project->issues()
-                ->whereIn('type', ['epic', 'story', 'task'])
-                ->where('id', '!=', $issue->id)
-                ->orderBy('key')
-                ->get(),
+            'currentProject' => $currentProject,
+            'issue' => $issueRow,
+            'activities' => $activities,
+            'canWrite' => $currentProject->can_write,
+            'hasChildIssues' => $childIssues->isNotEmpty(),
+            'members' => $this->membersWithTeamIds($project),
+            'teams' => $this->projectTeams($project),
+            'parentIssues' => $this->parentIssues($project, $issue),
         ]);
     }
 
-    public function update(Request $request, Project $project, Issue $issue): RedirectResponse
+    public function update(Request $request, string $project, string $issue): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertIssueBelongsToProject($issue, $project);
 
-        $validated = $this->validateIssue($request, $project, $issue);
+        $issueRow = $this->fetchIssue($project, $issue);
+        abort_if($issueRow === null, 404);
+
+        $validated = $this->validateIssue($request, $project, $issueRow);
         $trackedFields = [
             'title',
             'type',
@@ -171,35 +225,77 @@ class IssueController extends Controller
             'actual_result',
             'environment',
         ];
-        $oldValues = $issue->only($trackedFields);
-        $oldAssigneeId = $issue->assignee_id;
-        $oldStatus = $issue->status;
+        $oldValues = [];
+        foreach ($trackedFields as $field) {
+            $oldValues[$field] = $issueRow->{$field} ?? null;
+        }
+        $oldAssigneeId = $issueRow->assignee_id;
+        $oldStatus = $issueRow->status;
 
-        $issue->update([
-            ...$validated,
-            'team_id' => $validated['team_id'] ?? null,
-            'assignee_id' => $validated['assignee_id'] ?? null,
-            'parent_issue_id' => $validated['parent_issue_id'] ?? null,
-            'story_points' => $validated['story_points'] ?? null,
-        ]);
+        DB::update(
+            'UPDATE issues
+             SET title = ?, description = ?, type = ?, status = ?, priority = ?,
+                 assignee_id = ?, team_id = ?, parent_issue_id = ?, story_points = ?,
+                 severity = ?, steps_to_reproduce = ?, expected_result = ?,
+                 actual_result = ?, environment = ?, updated_at = ?
+             WHERE id = ? AND project_id = ?',
+            [
+                $validated['title'],
+                $validated['description'] ?? null,
+                $validated['type'],
+                $validated['status'],
+                $validated['priority'],
+                $validated['assignee_id'] ?? null,
+                $validated['team_id'] ?? null,
+                $validated['parent_issue_id'] ?? null,
+                $validated['story_points'] ?? null,
+                $validated['severity'] ?? null,
+                $validated['steps_to_reproduce'] ?? null,
+                $validated['expected_result'] ?? null,
+                $validated['actual_result'] ?? null,
+                $validated['environment'] ?? null,
+                now()->toDateTimeString(),
+                $issue,
+                $project,
+            ],
+        );
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'issue_id' => $issue->id,
-            'user_id' => $request->user()->id,
-            'action' => 'updated issue',
-            'subject_type' => Issue::class,
-            'subject_id' => $issue->id,
-            'old_values' => $oldValues,
-            'new_values' => $issue->only($trackedFields),
-        ]);
-
-        if ($issue->assignee_id && $issue->assignee_id !== $oldAssigneeId) {
-            $this->notifyAssignee($request, $project, $issue, 'Issue assigned', "{$request->user()->name} assigned {$issue->key} to you.");
+        $newValues = [];
+        foreach ($trackedFields as $field) {
+            $newValues[$field] = $validated[$field] ?? null;
         }
 
-        if ($issue->status !== $oldStatus) {
-            $this->notifyIssueWatchers($request, $project, $issue, 'Issue status changed', "{$issue->key} moved from {$oldStatus} to {$issue->status}.");
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'updated issue',
+            'App\Models\Issue',
+            $issue,
+            $issue,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
+
+        if (! empty($validated['assignee_id']) && $validated['assignee_id'] !== $oldAssigneeId) {
+            $this->pushNotification(
+                $validated['assignee_id'],
+                'Issue assigned',
+                "{$request->user()->name} assigned {$issueRow->key} to you.",
+                route('projects.issues.show', [$project, $issue]),
+                $project,
+                $issue,
+            );
+        }
+
+        if ($validated['status'] !== $oldStatus) {
+            $this->notifyIssueWatchers(
+                $issueRow,
+                'Issue status changed',
+                "{$issueRow->key} moved from {$oldStatus} to {$validated['status']}.",
+                route('projects.issues.show', [$project, $issue]),
+                $project,
+                $issue,
+            );
         }
 
         return redirect()
@@ -207,12 +303,17 @@ class IssueController extends Controller
             ->with('status', 'Issue updated.');
     }
 
-    public function destroy(Request $request, Project $project, Issue $issue): RedirectResponse
+    public function destroy(Request $request, string $project, string $issue): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertIssueBelongsToProject($issue, $project);
 
-        if ($issue->childIssues()->exists()) {
+        $issueRow = $this->fetchIssue($project, $issue);
+        abort_if($issueRow === null, 404);
+
+        if (DB::selectOne(
+            'SELECT 1 AS found FROM issues WHERE parent_issue_id = ?',
+            [$issue],
+        ) !== null) {
             return redirect()
                 ->route('projects.issues.show', [$project, $issue])
                 ->withErrors([
@@ -220,25 +321,178 @@ class IssueController extends Controller
                 ]);
         }
 
-        $deletedIssue = $issue->only(['id', 'key', 'title', 'type']);
+        $deletedIssue = [
+            'id' => $issueRow->id,
+            'key' => $issueRow->key,
+            'title' => $issueRow->title,
+            'type' => $issueRow->type,
+        ];
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'user_id' => $request->user()->id,
-            'action' => 'deleted issue',
-            'subject_type' => Issue::class,
-            'subject_id' => $issue->id,
-            'old_values' => $deletedIssue,
-        ]);
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'deleted issue',
+            'App\Models\Issue',
+            $issue,
+            oldValues: $deletedIssue,
+        );
 
-        $issue->delete();
+        DB::delete('DELETE FROM issues WHERE id = ? AND project_id = ?', [$issue, $project]);
 
         return redirect()
             ->route('projects.issues.index', $project)
             ->with('status', "{$deletedIssue['key']} deleted.");
     }
 
-    private function rules(Project $project, ?Issue $issue = null, ?string $type = null): array
+    private function fetchIssue(string $projectId, string $issueId): ?object
+    {
+        return SqlDialect::normalizeIssue(DB::selectOne(
+            'SELECT i.*,
+                    assignee.name AS assignee_name,
+                    reporter.name AS reporter_name,
+                    team.name AS team_name
+             FROM issues i
+             LEFT JOIN users assignee ON assignee.id = i.assignee_id
+             LEFT JOIN users reporter ON reporter.id = i.reporter_id
+             LEFT JOIN teams team ON team.id = i.team_id
+             WHERE i.project_id = ? AND i.id = ?
+            ',
+            [$projectId, $issueId],
+        ));
+    }
+
+    private function issuesWithChildren(string $projectId, string $parentIssueId): Collection
+    {
+        $children = SqlDialect::mapIssues(DB::select(
+            'SELECT i.*,
+                    assignee.name AS assignee_name,
+                    reporter.name AS reporter_name,
+                    team.name AS team_name
+             FROM issues i
+             LEFT JOIN users assignee ON assignee.id = i.assignee_id
+             LEFT JOIN users reporter ON reporter.id = i.reporter_id
+             LEFT JOIN teams team ON team.id = i.team_id
+             WHERE i.project_id = ? AND i.parent_issue_id = ?
+             ORDER BY i.key',
+            [$projectId, $parentIssueId],
+        ));
+
+        $childIds = $children->pluck('id')->all();
+
+        if ($childIds === []) {
+            return $children;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($childIds), '?'));
+        $grandchildren = SqlDialect::mapIssues(DB::select(
+            "SELECT i.*,
+                    assignee.name AS assignee_name,
+                    reporter.name AS reporter_name,
+                    team.name AS team_name
+             FROM issues i
+             LEFT JOIN users assignee ON assignee.id = i.assignee_id
+             LEFT JOIN users reporter ON reporter.id = i.reporter_id
+             LEFT JOIN teams team ON team.id = i.team_id
+             WHERE i.project_id = ? AND i.parent_issue_id IN ({$placeholders})
+             ORDER BY i.key",
+            array_merge([$projectId], $childIds),
+        ))->groupBy('parent_issue_id');
+
+        $children->each(function ($child) use ($grandchildren) {
+            $child->childIssues = $grandchildren->get($child->id, collect());
+        });
+
+        return $children;
+    }
+
+    private function issueComments(string $issueId): Collection
+    {
+        return SqlDialect::mapComments(DB::select(
+            'SELECT c.*, u.name AS user_name
+             FROM comments c
+             LEFT JOIN users u ON u.id = c.user_id
+             WHERE c.issue_id = ?
+             ORDER BY c.created_at DESC',
+            [$issueId],
+        ));
+    }
+
+    private function issueActivities(string $issueId): Collection
+    {
+        return SqlDialect::mapActivities(DB::select(
+            'SELECT al.*, u.name AS user_name
+             FROM activity_logs al
+             LEFT JOIN users u ON u.id = al.user_id
+             WHERE al.issue_id = ?
+             ORDER BY al.created_at DESC',
+            [$issueId],
+        ));
+    }
+
+    private function membersWithTeamIds(string $projectId): Collection
+    {
+        return SqlDialect::mapMembersWithTeamIds(DB::select(
+            'SELECT u.id, u.name, u.email,
+                    '.SqlDialect::groupConcat('t.id').'
+             FROM users u
+             INNER JOIN project_members pm ON pm.user_id = u.id
+             LEFT JOIN team_members tm ON tm.user_id = u.id
+             LEFT JOIN teams t ON t.id = tm.team_id AND t.project_id = ?
+             WHERE pm.project_id = ?
+             GROUP BY u.id, u.name, u.email
+             ORDER BY u.name',
+            [$projectId, $projectId],
+        ));
+    }
+
+    private function projectTeams(string $projectId): Collection
+    {
+        return collect(DB::select(
+            'SELECT id, name FROM teams WHERE project_id = ? ORDER BY name',
+            [$projectId],
+        ));
+    }
+
+    private function projectSprints(string $projectId): Collection
+    {
+        return SqlDialect::mapSprints(DB::select(
+            "SELECT s.*
+             FROM sprints s
+             WHERE s.project_id = ?
+             ORDER BY CASE s.status WHEN 'active' THEN 0 WHEN 'planned' THEN 1 ELSE 2 END, s.created_at DESC",
+            [$projectId],
+        ));
+    }
+
+    private function parentIssues(string $projectId, ?string $excludeIssueId = null): Collection
+    {
+        $sql = "SELECT id, key, title, type FROM issues
+                WHERE project_id = ? AND type IN ('epic', 'story', 'task')";
+        $bindings = [$projectId];
+
+        if ($excludeIssueId !== null) {
+            $sql .= ' AND id != ?';
+            $bindings[] = $excludeIssueId;
+        }
+
+        $sql .= ' ORDER BY key';
+
+        return collect(DB::select($sql, $bindings));
+    }
+
+    private function nextIssueKey(string $projectId, string $projectKey): string
+    {
+        $row = DB::selectOne(
+            SqlDialect::maxIssueNumberSql(),
+            [$projectKey, $projectId, $projectKey . '-%'],
+        );
+
+        $lastNumber = (int) ($row->last_number ?? 0);
+
+        return $projectKey . '-' . ($lastNumber + 1);
+    }
+
+    private function rules(string $projectId, ?string $issueId = null, ?string $type = null): array
     {
         return [
             'title' => ['required', 'string', 'max:180'],
@@ -254,24 +508,24 @@ class IssueController extends Controller
             'environment' => [Rule::requiredIf($type === 'bug'), 'nullable', 'string', 'max:180'],
             'assignee_id' => [
                 'nullable',
-                Rule::exists('project_members', 'user_id')->where('project_id', $project->id),
+                Rule::exists('project_members', 'user_id')->where('project_id', $projectId),
             ],
             'team_id' => [
                 'nullable',
-                Rule::exists('teams', 'id')->where('project_id', $project->id),
+                Rule::exists('teams', 'id')->where('project_id', $projectId),
             ],
             'parent_issue_id' => [
                 Rule::requiredIf(in_array($type, ['story', 'subtask'], true)),
                 'nullable',
-                Rule::exists('issues', 'id')->where('project_id', $project->id),
-                Rule::notIn([$issue?->id]),
+                Rule::exists('issues', 'id')->where('project_id', $projectId),
+                Rule::notIn([$issueId]),
             ],
         ];
     }
 
-    private function validateIssue(Request $request, Project $project, ?Issue $issue = null): array
+    private function validateIssue(Request $request, string $projectId, ?object $issue = null): array
     {
-        $validated = $request->validate($this->rules($project, $issue, $request->input('type')));
+        $validated = $request->validate($this->rules($projectId, $issue?->id, $request->input('type')));
 
         if (in_array($validated['type'], ['epic', 'task', 'bug'], true)) {
             $validated['parent_issue_id'] = null;
@@ -290,9 +544,12 @@ class IssueController extends Controller
         }
 
         if (! empty($validated['parent_issue_id'])) {
-            $parentIssue = Issue::query()
-                ->where('project_id', $project->id)
-                ->findOrFail($validated['parent_issue_id']);
+            $parentIssue = DB::selectOne(
+                'SELECT type FROM issues WHERE project_id = ? AND id = ?',
+                [$projectId, $validated['parent_issue_id']],
+            );
+
+            abort_if($parentIssue === null, 404);
 
             if ($validated['type'] === 'story' && $parentIssue->type !== 'epic') {
                 throw ValidationException::withMessages([
@@ -310,10 +567,10 @@ class IssueController extends Controller
         if (
             ! empty($validated['team_id'])
             && ! empty($validated['assignee_id'])
-            && ! DB::table('team_members')
-                ->where('team_id', $validated['team_id'])
-                ->where('user_id', $validated['assignee_id'])
-                ->exists()
+            && DB::selectOne(
+                'SELECT 1 AS found FROM team_members WHERE team_id = ? AND user_id = ?',
+                [$validated['team_id'], $validated['assignee_id']],
+            ) === null
         ) {
             throw ValidationException::withMessages([
                 'assignee_id' => 'The assignee must belong to the selected team.',
@@ -323,58 +580,18 @@ class IssueController extends Controller
         return $validated;
     }
 
-    private function nextIssueKey(Project $project): string
-    {
-        $lastNumber = $project->issues()
-            ->where('key', 'like', $project->key . '-%')
-            ->get()
-            ->map(fn (Issue $issue) => (int) str_replace($project->key . '-', '', $issue->key))
-            ->max() ?? 0;
+    private function notifyIssueWatchers(
+        object $issue,
+        string $title,
+        string $message,
+        string $url,
+        string $projectId,
+        string $issueId,
+    ): void {
+        $userIds = collect([$issue->reporter_id, $issue->assignee_id])->filter()->unique()->values()->all();
 
-        return $project->key . '-' . ($lastNumber + 1);
-    }
-
-    private function assertIssueBelongsToProject(Issue $issue, Project $project): void
-    {
-        abort_unless($issue->project_id === $project->id, 404);
-    }
-
-    private function projectMembersWithTeams(Project $project)
-    {
-        return $project->members()
-            ->with(['teams' => fn ($query) => $query->where('project_id', $project->id)])
-            ->orderBy('name')
-            ->get();
-    }
-
-    private function notifyAssignee(Request $request, Project $project, Issue $issue, string $title, string $message): void
-    {
-        $issue->loadMissing('assignee');
-
-        if ($issue->assignee) {
-            (new ProjectEventNotification(
-                $title,
-                $message,
-                route('projects.issues.show', [$project, $issue]),
-                $project->id,
-                $issue->id,
-            ))->sendTo($issue->assignee);
+        foreach ($userIds as $userId) {
+            $this->pushNotification($userId, $title, $message, $url, $projectId, $issueId);
         }
-    }
-
-    private function notifyIssueWatchers(Request $request, Project $project, Issue $issue, string $title, string $message): void
-    {
-        $issue->loadMissing(['reporter', 'assignee']);
-
-        collect([$issue->reporter, $issue->assignee])
-            ->filter()
-            ->unique('id')
-            ->each(fn ($user) => (new ProjectEventNotification(
-                $title,
-                $message,
-                route('projects.issues.show', [$project, $issue]),
-                $project->id,
-                $issue->id,
-            ))->sendTo($user));
     }
 }

@@ -17,22 +17,22 @@
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-700">{{ $activity->action }}</span>
-                            @if ($activity->issue)
-                                <a href="{{ route('projects.issues.show', [$currentProject, $activity->issue]) }}" wire:navigate
+                            @if ($activity->issue_id && $activity->issue_key)
+                                <a href="{{ route('projects.issues.show', [$currentProject->id, $activity->issue_id]) }}" wire:navigate
                                     class="text-xs font-bold text-blue-600 underline-offset-4 hover:underline">
-                                    {{ $activity->issue->key }}
+                                    {{ $activity->issue_key }}
                                 </a>
                             @endif
                         </div>
-                        <p class="mt-2 text-sm font-semibold text-neutral-950">{{ $activity->user?->name ?? 'System' }}</p>
+                        <p class="mt-2 text-sm font-semibold text-neutral-950">{{ $activity->user_name ?? 'System' }}</p>
                         @if ($activity->new_values || $activity->old_values)
                             <p class="mt-2 line-clamp-2 text-sm leading-6 text-neutral-600">
                                 {{ collect($activity->new_values ?? $activity->old_values)->map(fn ($value, $key) => str_replace('_', ' ', $key) . ': ' . (is_scalar($value) ? $value : json_encode($value)))->join(' | ') }}
                             </p>
                         @endif
                     </div>
-                    <time class="shrink-0 text-xs font-semibold text-neutral-500" datetime="{{ $activity->created_at?->toISOString() }}">
-                        {{ $activity->created_at?->diffForHumans() }}
+                    <time class="shrink-0 text-xs font-semibold text-neutral-500" datetime="{{ $activity->created_at }}">
+                        {{ $activity->created_at_human }}
                     </time>
                 </div>
             </article>

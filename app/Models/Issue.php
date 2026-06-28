@@ -77,4 +77,11 @@ class Issue extends Model
     {
         return $this->hasMany(ActivityLog::class);
     }
+
+    protected function casts(): array
+    {
+        return [
+            'story_points' => 'integer',
+        ];
+    }
 }

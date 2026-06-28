@@ -3,44 +3,78 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
-use App\Models\ActivityLog;
-use App\Models\Issue;
-use App\Models\Project;
-use App\Models\Sprint;
-use App\Notifications\ProjectEventNotification;
+use App\Support\SqlDialect;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class SprintController extends Controller
 {
     use AuthorizesProjectMembership;
 
-    public function index(Request $request, Project $project): View
+    public function index(Request $request, string $project): View
     {
-        $this->authorizeProjectAccess($request, $project);
+        $currentProject = $this->authorizeProjectAccess($request, $project);
+
+        $sprints = SqlDialect::mapSprints(DB::select(
+            "SELECT s.*,
+                    (SELECT COUNT(*) FROM issues i WHERE i.sprint_id = s.id) AS issues_count
+             FROM sprints s
+             WHERE s.project_id = ?
+             ORDER BY CASE s.status WHEN 'active' THEN 0 WHEN 'planned' THEN 1 ELSE 2 END, s.created_at DESC",
+            [$project],
+        ));
+
+        $sprintIds = $sprints->pluck('id')->all();
+        $issuesBySprint = collect();
+
+        if ($sprintIds !== []) {
+            $placeholders = implode(', ', array_fill(0, count($sprintIds), '?'));
+            $issuesBySprint = SqlDialect::mapIssues(DB::select(
+                "SELECT i.*,
+                        assignee.name AS assignee_name,
+                        team.name AS team_name
+                 FROM issues i
+                 LEFT JOIN users assignee ON assignee.id = i.assignee_id
+                 LEFT JOIN teams team ON team.id = i.team_id
+                 WHERE i.sprint_id IN ({$placeholders})
+                 ORDER BY i.key",
+                $sprintIds,
+            ))->groupBy('sprint_id');
+        }
+
+        $sprints->each(function ($sprint) use ($issuesBySprint) {
+            $sprint->issues = $issuesBySprint->get($sprint->id, collect());
+        });
+
+        $backlogIssues = SqlDialect::mapIssues(DB::select(
+            "SELECT i.*,
+                    assignee.name AS assignee_name,
+                    team.name AS team_name
+             FROM issues i
+             LEFT JOIN users assignee ON assignee.id = i.assignee_id
+             LEFT JOIN teams team ON team.id = i.team_id
+             WHERE i.project_id = ?
+               AND i.sprint_id IS NULL
+               AND i.status = 'backlog'
+               AND i.type IN ('story', 'task', 'subtask', 'bug')
+             ORDER BY i.key",
+            [$project],
+        ));
 
         return view('projects.sprints.index', [
             'projects' => $this->userProjects($request),
-            'currentProject' => $project,
-            'sprints' => $project->sprints()
-                ->with(['issues.assignee', 'issues.team'])
-                ->withCount('issues')
-                ->orderByRaw("case status when 'active' then 0 when 'planned' then 1 else 2 end")
-                ->latest()
-                ->get(),
-            'backlogIssues' => $project->issues()
-                ->whereNull('sprint_id')
-                ->where('status', 'backlog')
-                ->whereIn('type', ['story', 'task', 'subtask', 'bug'])
-                ->with(['assignee', 'team'])
-                ->orderBy('key')
-                ->get(),
+            'currentProject' => $currentProject,
+            'sprints' => $sprints,
+            'backlogIssues' => $backlogIssues,
         ]);
     }
 
-    public function store(Request $request, Project $project): RedirectResponse
+    public function store(Request $request, string $project): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
 
@@ -51,33 +85,48 @@ class SprintController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
-        $sprint = Sprint::create([
-            ...$validated,
-            'project_id' => $project->id,
-            'status' => 'planned',
-        ]);
+        $sprintId = (string) Str::uuid();
+        $now = now()->toDateTimeString();
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'user_id' => $request->user()->id,
-            'action' => 'created sprint',
-            'subject_type' => Sprint::class,
-            'subject_id' => $sprint->id,
-            'new_values' => [
-                'name' => $sprint->name,
-                'status' => $sprint->status,
+        DB::insert(
+            'INSERT INTO sprints (id, project_id, name, goal, start_date, end_date, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                $sprintId,
+                $project,
+                $validated['name'],
+                $validated['goal'] ?? null,
+                $validated['start_date'] ?? null,
+                $validated['end_date'] ?? null,
+                'planned',
+                $now,
+                $now,
             ],
-        ]);
+        );
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'created sprint',
+            'App\Models\Sprint',
+            $sprintId,
+            newValues: [
+                'name' => $validated['name'],
+                'status' => 'planned',
+            ],
+        );
 
         return redirect()
             ->route('projects.sprints.index', $project)
             ->with('status', 'Sprint created.');
     }
 
-    public function update(Request $request, Project $project, Sprint $sprint): RedirectResponse
+    public function update(Request $request, string $project, string $sprint): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertSprintBelongsToProject($sprint, $project);
+
+        $sprintRow = SqlDialect::normalizeSprint(DB::selectOne('SELECT * FROM sprints WHERE id = ? AND project_id = ?', [$sprint, $project]));
+        abort_if($sprintRow === null, 404);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -86,38 +135,66 @@ class SprintController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
-        $oldValues = $sprint->only(['name', 'goal', 'start_date', 'end_date']);
-        $sprint->update($validated);
+        $oldValues = [
+            'name' => $sprintRow->name,
+            'goal' => $sprintRow->goal,
+            'start_date' => $sprintRow->start_date,
+            'end_date' => $sprintRow->end_date,
+        ];
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'user_id' => $request->user()->id,
-            'action' => 'updated sprint',
-            'subject_type' => Sprint::class,
-            'subject_id' => $sprint->id,
-            'old_values' => $oldValues,
-            'new_values' => $sprint->only(['name', 'goal', 'start_date', 'end_date']),
-        ]);
+        $newValues = [
+            'name' => $validated['name'],
+            'goal' => $validated['goal'] ?? null,
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
+        ];
+
+        DB::update(
+            'UPDATE sprints SET name = ?, goal = ?, start_date = ?, end_date = ?, updated_at = ? WHERE id = ?',
+            [
+                $newValues['name'],
+                $newValues['goal'],
+                $newValues['start_date'],
+                $newValues['end_date'],
+                now()->toDateTimeString(),
+                $sprint,
+            ],
+        );
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'updated sprint',
+            'App\Models\Sprint',
+            $sprint,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
 
         return redirect()
             ->route('projects.sprints.index', $project)
             ->with('status', 'Sprint updated.');
     }
 
-    public function addIssue(Request $request, Project $project, Sprint $sprint): RedirectResponse
+    public function addIssue(Request $request, string $project, string $sprint): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertSprintBelongsToProject($sprint, $project);
+
+        $sprintRow = DB::selectOne('SELECT name FROM sprints WHERE id = ? AND project_id = ?', [$sprint, $project]);
+        abort_if($sprintRow === null, 404);
 
         $validated = $request->validate([
             'issue_id' => [
                 'required',
-                Rule::exists('issues', 'id')->where('project_id', $project->id),
+                Rule::exists('issues', 'id')->where('project_id', $project),
             ],
         ]);
 
-        $issue = Issue::findOrFail($validated['issue_id']);
-        $this->assertIssueBelongsToProject($issue, $project);
+        $issue = DB::selectOne(
+            'SELECT id, key, type, sprint_id, status FROM issues WHERE id = ? AND project_id = ?',
+            [$validated['issue_id'], $project],
+        );
+        abort_if($issue === null, 404);
 
         if ($issue->type === 'epic') {
             return back()->withErrors([
@@ -131,70 +208,80 @@ class SprintController extends Controller
             ]);
         }
 
-        $issue->update([
-            'sprint_id' => $sprint->id,
-            'status' => $issue->status === 'backlog' ? 'selected' : $issue->status,
-        ]);
+        $newStatus = $issue->status === 'backlog' ? 'selected' : $issue->status;
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'issue_id' => $issue->id,
-            'user_id' => $request->user()->id,
-            'action' => 'added issue to sprint',
-            'subject_type' => Sprint::class,
-            'subject_id' => $sprint->id,
-            'new_values' => [
-                'sprint' => $sprint->name,
+        DB::update(
+            'UPDATE issues SET sprint_id = ?, status = ?, updated_at = ? WHERE id = ?',
+            [$sprint, $newStatus, now()->toDateTimeString(), $issue->id],
+        );
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'added issue to sprint',
+            'App\Models\Sprint',
+            $sprint,
+            $issue->id,
+            newValues: [
+                'sprint' => $sprintRow->name,
                 'issue' => $issue->key,
             ],
-        ]);
+        );
 
         return redirect()
             ->route('projects.sprints.index', $project)
             ->with('status', 'Issue added to sprint.');
     }
 
-    public function removeIssue(Request $request, Project $project, Sprint $sprint, Issue $issue): RedirectResponse
+    public function removeIssue(Request $request, string $project, string $sprint, string $issue): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertSprintBelongsToProject($sprint, $project);
-        $this->assertIssueBelongsToProject($issue, $project);
-        abort_unless($issue->sprint_id === $sprint->id, 404);
 
-        $issue->update([
-            'sprint_id' => null,
-            'status' => 'backlog',
-        ]);
+        $sprintRow = DB::selectOne('SELECT name FROM sprints WHERE id = ? AND project_id = ?', [$sprint, $project]);
+        abort_if($sprintRow === null, 404);
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'issue_id' => $issue->id,
-            'user_id' => $request->user()->id,
-            'action' => 'removed issue from sprint',
-            'subject_type' => Sprint::class,
-            'subject_id' => $sprint->id,
-            'old_values' => [
-                'sprint' => $sprint->name,
-                'issue' => $issue->key,
+        $issueRow = DB::selectOne(
+            'SELECT key, sprint_id FROM issues WHERE id = ? AND project_id = ?',
+            [$issue, $project],
+        );
+        abort_if($issueRow === null || $issueRow->sprint_id !== $sprint, 404);
+
+        DB::update(
+            "UPDATE issues SET sprint_id = NULL, status = 'backlog', updated_at = ? WHERE id = ?",
+            [now()->toDateTimeString(), $issue],
+        );
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'removed issue from sprint',
+            'App\Models\Sprint',
+            $sprint,
+            $issue,
+            oldValues: [
+                'sprint' => $sprintRow->name,
+                'issue' => $issueRow->key,
             ],
-        ]);
+        );
 
         return redirect()
             ->route('projects.sprints.index', $project)
             ->with('status', 'Issue returned to backlog.');
     }
 
-    public function start(Request $request, Project $project, Sprint $sprint): RedirectResponse
+    public function start(Request $request, string $project, string $sprint): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertSprintBelongsToProject($sprint, $project);
 
-        $activeSprint = $project->sprints()
-            ->where('status', 'active')
-            ->whereKeyNot($sprint->id)
-            ->first();
+        $sprintRow = DB::selectOne('SELECT name FROM sprints WHERE id = ? AND project_id = ?', [$sprint, $project]);
+        abort_if($sprintRow === null, 404);
 
-        if (! $sprint->issues()->exists()) {
+        $activeSprint = DB::selectOne(
+            "SELECT name FROM sprints WHERE project_id = ? AND status = 'active' AND id != ?",
+            [$project, $sprint],
+        );
+
+        if (DB::selectOne('SELECT 1 AS found FROM issues WHERE sprint_id = ?', [$sprint]) === null) {
             return back()->withErrors([
                 'sprint' => 'Add at least one issue before starting a sprint.',
             ]);
@@ -202,79 +289,96 @@ class SprintController extends Controller
 
         if ($activeSprint && ! $request->boolean('confirm_replace_active')) {
             return back()->withErrors([
-                'sprint' => "Confirm before starting {$sprint->name}. {$activeSprint->name} is already active and will move back to planned.",
+                'sprint' => "Confirm before starting {$sprintRow->name}. {$activeSprint->name} is already active and will move back to planned.",
             ]);
         }
 
-        $project->sprints()->where('status', 'active')->whereKeyNot($sprint->id)->update(['status' => 'planned']);
-        $sprint->update(['status' => 'active']);
+        $now = now()->toDateTimeString();
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'user_id' => $request->user()->id,
-            'action' => 'started sprint',
-            'subject_type' => Sprint::class,
-            'subject_id' => $sprint->id,
-            'new_values' => ['status' => 'active'],
-        ]);
+        DB::update(
+            "UPDATE sprints SET status = 'planned', updated_at = ? WHERE project_id = ? AND status = 'active' AND id != ?",
+            [$now, $project, $sprint],
+        );
 
-        $this->notifyProjectMembers($request, $project, 'Sprint started', "{$sprint->name} is now active.", route('projects.board.index', $project));
+        DB::update(
+            "UPDATE sprints SET status = 'active', updated_at = ? WHERE id = ?",
+            [$now, $sprint],
+        );
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'started sprint',
+            'App\Models\Sprint',
+            $sprint,
+            newValues: ['status' => 'active'],
+        );
+
+        $this->notifyProjectMembers(
+            $project,
+            'Sprint started',
+            "{$sprintRow->name} is now active.",
+            route('projects.board.index', $project),
+        );
 
         return redirect()
             ->route('projects.sprints.index', $project)
             ->with('status', 'Sprint started.');
     }
 
-    public function complete(Request $request, Project $project, Sprint $sprint): RedirectResponse
+    public function complete(Request $request, string $project, string $sprint): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertSprintBelongsToProject($sprint, $project);
 
-        $sprint->issues()
-            ->where('status', '!=', 'done')
-            ->update([
-                'sprint_id' => null,
-                'status' => 'backlog',
-            ]);
+        $sprintRow = DB::selectOne('SELECT name FROM sprints WHERE id = ? AND project_id = ?', [$sprint, $project]);
+        abort_if($sprintRow === null, 404);
 
-        $sprint->update(['status' => 'completed']);
+        $now = now()->toDateTimeString();
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'user_id' => $request->user()->id,
-            'action' => 'completed sprint',
-            'subject_type' => Sprint::class,
-            'subject_id' => $sprint->id,
-            'new_values' => ['status' => 'completed'],
-        ]);
+        DB::update(
+            "UPDATE issues SET sprint_id = NULL, status = 'backlog', updated_at = ?
+             WHERE sprint_id = ? AND status != 'done'",
+            [$now, $sprint],
+        );
 
-        $this->notifyProjectMembers($request, $project, 'Sprint completed', "{$sprint->name} has been completed.", route('projects.sprints.index', $project));
+        DB::update(
+            "UPDATE sprints SET status = 'completed', updated_at = ? WHERE id = ?",
+            [$now, $sprint],
+        );
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'completed sprint',
+            'App\Models\Sprint',
+            $sprint,
+            newValues: ['status' => 'completed'],
+        );
+
+        $this->notifyProjectMembers(
+            $project,
+            'Sprint completed',
+            "{$sprintRow->name} has been completed.",
+            route('projects.sprints.index', $project),
+        );
 
         return redirect()
             ->route('projects.sprints.index', $project)
             ->with('status', 'Sprint completed.');
     }
 
-    private function assertSprintBelongsToProject(Sprint $sprint, Project $project): void
+    private function notifyProjectMembers(string $projectId, string $title, string $message, string $url): void
     {
-        abort_unless($sprint->project_id === $project->id, 404);
-    }
+        $members = DB::select(
+            'SELECT DISTINCT u.id
+             FROM users u
+             INNER JOIN project_members pm ON pm.user_id = u.id
+             WHERE pm.project_id = ?',
+            [$projectId],
+        );
 
-    private function assertIssueBelongsToProject(Issue $issue, Project $project): void
-    {
-        abort_unless($issue->project_id === $project->id, 404);
-    }
-
-    private function notifyProjectMembers(Request $request, Project $project, string $title, string $message, string $url): void
-    {
-        $project->members()
-            ->get()
-            ->unique('id')
-            ->each(fn ($user) => (new ProjectEventNotification(
-                $title,
-                $message,
-                $url,
-                $project->id,
-            ))->sendTo($user));
+        foreach ($members as $member) {
+            $this->pushNotification($member->id, $title, $message, $url, $projectId);
+        }
     }
 }

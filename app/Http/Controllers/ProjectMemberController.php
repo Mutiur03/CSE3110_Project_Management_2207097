@@ -3,9 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
-use App\Models\ActivityLog;
-use App\Models\Project;
-use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,20 +14,29 @@ class ProjectMemberController extends Controller
 {
     use AuthorizesProjectMembership;
 
-    public function index(Request $request, Project $project): View
+    public function index(Request $request, string $project): View
     {
-        $this->authorizeProjectAccess($request, $project);
+        $currentProject = $this->authorizeProjectAccess($request, $project);
+
+        $members = collect(DB::select(
+            'SELECT u.id, u.name, u.email, pm.role
+             FROM users u
+             INNER JOIN project_members pm ON pm.user_id = u.id
+             WHERE pm.project_id = ?
+             ORDER BY u.name',
+            [$project],
+        ));
 
         return view('projects.members.index', [
             'projects' => $this->userProjects($request),
-            'currentProject' => $project,
-            'members' => $project->members()->orderBy('name')->get(),
+            'currentProject' => $currentProject,
+            'members' => $members,
         ]);
     }
 
-    public function store(Request $request, Project $project): RedirectResponse
+    public function store(Request $request, string $project): RedirectResponse
     {
-        $this->authorizeProjectManagement($request, $project);
+        $currentProject = $this->authorizeProjectManagement($request, $project);
 
         $request->merge([
             'email' => Str::lower((string) $request->input('email')),
@@ -43,107 +49,126 @@ class ProjectMemberController extends Controller
             'email.exists' => 'That email is not registered yet. Ask the user to create an account first, then add them to the project.',
         ]);
 
-        $user = User::where('email', $validated['email'])->firstOrFail();
+        $user = DB::selectOne('SELECT id, email FROM users WHERE email = ?', [$validated['email']]);
+        abort_if($user === null, 404);
 
-        if ($project->members()->where('users.id', $user->id)->exists()) {
+        if (DB::selectOne(
+            'SELECT 1 AS found FROM project_members WHERE project_id = ? AND user_id = ?',
+            [$project, $user->id],
+        ) !== null) {
             return back()
                 ->withErrors(['email' => 'This user is already a project member.'])
                 ->withInput();
         }
 
-        DB::table('project_members')->insert([
-            'id' => (string) Str::uuid(),
-            'project_id' => $project->id,
-            'user_id' => $user->id,
-            'role' => $validated['role'],
-            'joined_at' => now(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $now = now()->toDateTimeString();
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'user_id' => $request->user()->id,
-            'action' => 'added project member',
-            'subject_type' => User::class,
-            'subject_id' => $user->id,
-            'new_values' => [
+        DB::insert(
+            'INSERT INTO project_members (id, project_id, user_id, role, joined_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+                (string) Str::uuid(),
+                $project,
+                $user->id,
+                $validated['role'],
+                $now,
+                $now,
+                $now,
+            ],
+        );
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'added project member',
+            'App\Models\User',
+            $user->id,
+            newValues: [
                 'member' => $user->email,
                 'role' => $validated['role'],
             ],
-        ]);
+        );
 
         return redirect()
             ->route('projects.members.index', $project)
             ->with('status', 'Project member added.');
     }
 
-    public function update(Request $request, Project $project, User $user): RedirectResponse
+    public function update(Request $request, string $project, string $user): RedirectResponse
     {
         $this->authorizeProjectManagement($request, $project);
-        abort_unless($project->members()->where('users.id', $user->id)->exists(), 404);
+
+        abort_if(DB::selectOne(
+            'SELECT 1 AS found FROM project_members WHERE project_id = ? AND user_id = ?',
+            [$project, $user],
+        ) === null, 404);
 
         $validated = $request->validate([
             'role' => ['required', Rule::in(['project_owner', 'scrum_master', 'developer', 'viewer', 'admin'])],
         ]);
 
-        DB::table('project_members')
-            ->where('project_id', $project->id)
-            ->where('user_id', $user->id)
-            ->update([
-                'role' => $validated['role'],
-                'updated_at' => now(),
-            ]);
+        $member = DB::selectOne('SELECT email FROM users WHERE id = ?', [$user]);
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'user_id' => $request->user()->id,
-            'action' => 'updated project member role',
-            'subject_type' => User::class,
-            'subject_id' => $user->id,
-            'new_values' => [
-                'member' => $user->email,
+        DB::update(
+            'UPDATE project_members SET role = ?, updated_at = ? WHERE project_id = ? AND user_id = ?',
+            [$validated['role'], now()->toDateTimeString(), $project, $user],
+        );
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'updated project member role',
+            'App\Models\User',
+            $user,
+            newValues: [
+                'member' => $member->email ?? $user,
                 'role' => $validated['role'],
             ],
-        ]);
+        );
 
         return redirect()
             ->route('projects.members.index', $project)
             ->with('status', 'Project member updated.');
     }
 
-    public function destroy(Request $request, Project $project, User $user): RedirectResponse
+    public function destroy(Request $request, string $project, string $user): RedirectResponse
     {
-        $this->authorizeProjectManagement($request, $project);
-        abort_unless($project->members()->where('users.id', $user->id)->exists(), 404);
+        $currentProject = $this->authorizeProjectManagement($request, $project);
 
-        if ($project->owner_id === $user->id) {
+        abort_if(DB::selectOne(
+            'SELECT 1 AS found FROM project_members WHERE project_id = ? AND user_id = ?',
+            [$project, $user],
+        ) === null, 404);
+
+        if ($currentProject->owner_id === $user) {
             return back()->withErrors(['member' => 'The project owner cannot be removed.']);
         }
 
-        $teamIds = $project->teams()->pluck('id');
+        $member = DB::selectOne('SELECT email FROM users WHERE id = ?', [$user]);
 
-        DB::transaction(function () use ($project, $user, $teamIds, $request) {
-            DB::table('team_members')
-                ->whereIn('team_id', $teamIds)
-                ->where('user_id', $user->id)
-                ->delete();
+        DB::transaction(function () use ($project, $user, $request, $member) {
+            DB::delete(
+                'DELETE FROM team_members
+                 WHERE user_id = ?
+                   AND team_id IN (SELECT id FROM teams WHERE project_id = ?)',
+                [$user, $project],
+            );
 
-            DB::table('project_members')
-                ->where('project_id', $project->id)
-                ->where('user_id', $user->id)
-                ->delete();
+            DB::delete(
+                'DELETE FROM project_members WHERE project_id = ? AND user_id = ?',
+                [$project, $user],
+            );
 
-            ActivityLog::create([
-                'project_id' => $project->id,
-                'user_id' => $request->user()->id,
-                'action' => 'removed project member',
-                'subject_type' => User::class,
-                'subject_id' => $user->id,
-                'old_values' => [
-                    'member' => $user->email,
+            $this->logActivity(
+                $project,
+                $request->user()->id,
+                'removed project member',
+                'App\Models\User',
+                $user,
+                oldValues: [
+                    'member' => $member->email ?? $user,
                 ],
-            ]);
+            );
         });
 
         return redirect()

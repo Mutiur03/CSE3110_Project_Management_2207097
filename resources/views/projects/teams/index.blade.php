@@ -1,6 +1,6 @@
 <x-dashboard.layout title="Teams" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
     @php
-        $canWrite = $currentProject->userCanWrite(auth()->user());
+        $canWrite = (bool) ($currentProject->can_write ?? false);
     @endphp
     <div class="grid gap-6 xl:grid-cols-[1fr_22rem]">
         <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
@@ -38,7 +38,7 @@
 
     @if ($canWrite)
     <x-dashboard.modal id="create-team-modal" title="Create team">
-        <form method="POST" action="{{ route('projects.teams.store', $currentProject) }}" class="space-y-4">
+        <form method="POST" action="{{ route('projects.teams.store', $currentProject->id) }}" class="space-y-4">
                 @csrf
 
                 <div>
@@ -97,10 +97,10 @@
                                         </span>
                                         <div class="min-w-0 flex-1">
                                             <p class="truncate text-sm font-semibold text-neutral-950">{{ $member->name }}</p>
-                                            <p class="truncate text-xs text-neutral-500">{{ $member->pivot->role }}</p>
+                                            <p class="truncate text-xs text-neutral-500">{{ $member->role }}</p>
                                         </div>
                                         @if ($canWrite)
-                                            <form method="POST" action="{{ route('projects.teams.members.destroy', [$currentProject, $team, $member]) }}">
+                                            <form method="POST" action="{{ route('projects.teams.members.destroy', [$currentProject->id, $team->id, $member->id]) }}">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
@@ -127,7 +127,7 @@
                         </div>
 
                         <x-dashboard.modal id="add-team-member-{{ $team->id }}" title="Add member to {{ $team->name }}">
-                            <form method="POST" action="{{ route('projects.teams.members.store', [$currentProject, $team]) }}"
+                            <form method="POST" action="{{ route('projects.teams.members.store', [$currentProject->id, $team->id]) }}"
                                 class="space-y-4">
                             @csrf
 
@@ -165,7 +165,7 @@
                                     Remove this team from the project.
                                 @endif
                             </p>
-                            <form method="POST" action="{{ route('projects.teams.destroy', [$currentProject, $team]) }}"
+                            <form method="POST" action="{{ route('projects.teams.destroy', [$currentProject->id, $team->id]) }}"
                                 class="mt-3"
                                 onsubmit="return confirm('Delete {{ $team->name }}? This cannot be undone.')">
                                 @csrf

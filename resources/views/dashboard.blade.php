@@ -26,7 +26,7 @@
 @endphp
 
 @php
-    $canWriteDashboard = $hasProject && $currentProject->userCanWrite(auth()->user());
+    $canWriteDashboard = $hasProject && (bool) ($currentProject->can_write ?? false);
 @endphp
 
 <x-dashboard.layout title="Dashboard" eyebrow="Project workspace" :current-project="$currentProject" :projects="$projects">
@@ -55,8 +55,8 @@
         @if ($currentProject->status === 'archived')
             <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 This project is archived. Work is read-only until a project owner or scrum master reactivates it
-                @if ($currentProject->userCanManage(auth()->user()))
-                    in <a href="{{ route('projects.settings.edit', $currentProject) }}" wire:navigate class="font-semibold underline-offset-4 hover:underline">settings</a>.
+                @if ($currentProject->can_manage ?? false)
+                    in <a href="{{ route('projects.settings.edit', $currentProject->id) }}" wire:navigate class="font-semibold underline-offset-4 hover:underline">settings</a>.
                 @else
                     from project settings.
                 @endif
@@ -82,7 +82,7 @@
                                 <select id="project-switcher" name="project" onchange="this.form.submit()"
                                     class="w-full rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm font-semibold text-neutral-950 outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">
                                     @foreach ($projects as $project)
-                                        <option value="{{ $project->id }}" @selected($project->is($currentProject))>
+                                        <option value="{{ $project->id }}" @selected($currentProject && $project->id === $currentProject->id)>
                                             {{ $project->name }}
                                         </option>
                                     @endforeach
@@ -90,7 +90,7 @@
                             </form>
                         @endif
                         @if ($canWriteDashboard)
-                        <a href="{{ route('projects.issues.create', $currentProject) }}" wire:navigate
+                        <a href="{{ route('projects.issues.create', $currentProject->id) }}" wire:navigate
                             class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
                             Create issue
                         </a>
@@ -120,7 +120,7 @@
                         <h2 class="text-lg font-bold">Teams in this project</h2>
                         <p class="text-sm text-neutral-500">Each team belongs to {{ $currentProject->name }}</p>
                     </div>
-                    <a href="{{ route('projects.teams.index', $currentProject) }}" wire:navigate
+                    <a href="{{ route('projects.teams.index', $currentProject->id) }}" wire:navigate
                         class="text-sm font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4">
                         Add team
                     </a>
@@ -177,8 +177,8 @@
                                             <span class="text-[10px] font-bold text-neutral-400">{{ $issue->key }}</span>
                                         </div>
                                         <p class="mt-3 text-sm font-semibold leading-5">{{ $issue->title }}</p>
-                                        @if ($issue->team)
-                                            <p class="mt-2 text-xs text-neutral-500">{{ $issue->team->name }}</p>
+                                        @if ($issue->team_name)
+                                            <p class="mt-2 text-xs text-neutral-500">{{ $issue->team_name }}</p>
                                         @endif
                                     </article>
                                 @empty
@@ -214,12 +214,12 @@
                             <span class="mt-1 size-2 rounded-full bg-neutral-950"></span>
                             <div>
                                 <p class="text-sm font-medium text-neutral-950">
-                                    {{ $activity->user?->name ?? 'System' }} {{ $activity->action }}
-                                    @if ($activity->issue)
-                                        {{ $activity->issue->key }}
+                                    {{ $activity->user_name ?? 'System' }} {{ $activity->action }}
+                                    @if ($activity->issue_key)
+                                        {{ $activity->issue_key }}
                                     @endif
                                 </p>
-                                <p class="text-xs text-neutral-500">{{ $activity->created_at->diffForHumans() }}</p>
+                                <p class="text-xs text-neutral-500">{{ $activity->created_at_human }}</p>
                             </div>
                         </div>
                     @empty

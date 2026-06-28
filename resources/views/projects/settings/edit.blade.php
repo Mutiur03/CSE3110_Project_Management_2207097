@@ -21,7 +21,7 @@
             </p>
         @endif
 
-        <form method="POST" action="{{ route('projects.update', $currentProject) }}"
+        <form method="POST" action="{{ route('projects.update', $currentProject->id) }}"
             class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
             @csrf
             @method('PATCH')

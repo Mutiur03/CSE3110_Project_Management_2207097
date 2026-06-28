@@ -23,9 +23,8 @@
     ];
 
     $canHaveChildren = in_array($issue->type, ['epic', 'story', 'task'], true);
-    $activities = $issue->activityLogs->sortByDesc('created_at');
-    $canWrite = $currentProject->userCanWrite(auth()->user());
-    $hasChildIssues = $issue->childIssues->isNotEmpty();
+    $canWrite = $canWrite ?? false;
+    $hasChildIssues = $hasChildIssues ?? $issue->childIssues->isNotEmpty();
 @endphp
 
 <x-dashboard.layout title="{{ $issue->key }}" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -52,11 +51,11 @@
                 </div>
                 <div class="flex justify-between gap-3">
                     <dt class="text-neutral-500">Assignee</dt>
-                    <dd class="font-semibold text-neutral-950">{{ $issue->assignee?->name ?? 'Unassigned' }}</dd>
+                    <dd class="font-semibold text-neutral-950">{{ $issue->assignee_name ?? 'Unassigned' }}</dd>
                 </div>
                 <div class="flex justify-between gap-3">
                     <dt class="text-neutral-500">Team</dt>
-                    <dd class="font-semibold text-neutral-950">{{ $issue->team?->name ?? 'No team' }}</dd>
+                    <dd class="font-semibold text-neutral-950">{{ $issue->team_name ?? 'No team' }}</dd>
                 </div>
                 @if ($issue->type === 'bug')
                     <div class="flex justify-between gap-3">
@@ -157,7 +156,7 @@
             </div>
 
             @if ($canWrite)
-            <form method="POST" action="{{ route('projects.issues.comments.store', [$currentProject, $issue]) }}" class="mt-4">
+            <form method="POST" action="{{ route('projects.issues.comments.store', [$currentProject->id, $issue->id]) }}" class="mt-4">
                 @csrf
                 <label for="comment-body" class="sr-only">Add comment</label>
                 <textarea id="comment-body" name="body" rows="3" required placeholder="Add an update, question, or testing note..."
@@ -178,9 +177,9 @@
             @endif
 
             <div class="mt-5 space-y-3">
-                @forelse ($issue->comments->sortByDesc('created_at') as $comment)
+                @forelse ($issue->comments as $comment)
                     @php
-                        $commentInitials = collect(explode(' ', $comment->user?->name ?? 'User'))
+                        $commentInitials = collect(explode(' ', $comment->user_name ?? 'User'))
                             ->filter()
                             ->take(2)
                             ->map(fn ($part) => substr($part, 0, 1))
@@ -193,12 +192,12 @@
                                     {{ strtoupper($commentInitials ?: 'U') }}
                                 </span>
                                 <div class="min-w-0">
-                                    <p class="truncate text-sm font-bold text-neutral-950">{{ $comment->user?->name ?? 'Unknown user' }}</p>
-                                    <p class="text-xs font-semibold text-neutral-500">{{ $comment->created_at?->diffForHumans() }}</p>
+                                    <p class="truncate text-sm font-bold text-neutral-950">{{ $comment->user_name ?? 'Unknown user' }}</p>
+                                    <p class="text-xs font-semibold text-neutral-500">{{ $comment->created_at_human }}</p>
                                 </div>
                             </div>
                             @if ($canWrite)
-                            <form method="POST" action="{{ route('projects.issues.comments.destroy', [$currentProject, $issue, $comment]) }}">
+                            <form method="POST" action="{{ route('projects.issues.comments.destroy', [$currentProject->id, $issue->id, $comment->id]) }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="rounded-md px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50">
@@ -220,18 +219,18 @@
         <aside class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
             <h3 class="text-sm font-bold text-neutral-950">Issue activity</h3>
             <div class="mt-4 space-y-4">
-                @forelse ($activities->take(8) as $activity)
+                @forelse (($activities ?? collect())->take(8) as $activity)
                     <article class="border-l-2 border-neutral-200 pl-3">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="rounded bg-neutral-100 px-2 py-1 text-[10px] font-bold uppercase text-neutral-700">{{ $activity->action }}</span>
                         </div>
-                        <p class="mt-2 text-sm font-semibold text-neutral-950">{{ $activity->user?->name ?? 'System' }}</p>
+                        <p class="mt-2 text-sm font-semibold text-neutral-950">{{ $activity->user_name ?? 'System' }}</p>
                         @if ($activity->new_values || $activity->old_values)
                             <p class="mt-1 text-xs leading-5 text-neutral-500">
                                 {{ collect($activity->new_values ?? $activity->old_values)->map(fn ($value, $key) => str_replace('_', ' ', $key) . ': ' . (is_scalar($value) ? $value : json_encode($value)))->join(' | ') }}
                             </p>
                         @endif
-                        <p class="mt-1 text-xs font-semibold text-neutral-400">{{ $activity->created_at?->diffForHumans() }}</p>
+                        <p class="mt-1 text-xs font-semibold text-neutral-400">{{ $activity->created_at_human }}</p>
                     </article>
                 @empty
                     <p class="text-sm text-neutral-500">No activity yet.</p>
@@ -241,7 +240,7 @@
     </div>
 
     @if ($canWrite)
-    <form method="POST" action="{{ route('projects.issues.update', [$currentProject, $issue]) }}"
+    <form method="POST" action="{{ route('projects.issues.update', [$currentProject->id, $issue->id]) }}"
         class="mt-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         @csrf
         @method('PATCH')
@@ -252,7 +251,7 @@
             'teams' => $teams,
             'parentIssues' => $parentIssues,
             'submitLabel' => 'Save issue',
-            'cancelUrl' => route('projects.issues.index', $currentProject),
+            'cancelUrl' => route('projects.issues.index', $currentProject->id),
             'fieldPrefix' => 'edit-issue',
         ])
     </form>
@@ -270,7 +269,7 @@
             @error('issue')
                 <p class="mt-3 text-sm font-medium text-red-600">{{ $message }}</p>
             @enderror
-            <form method="POST" action="{{ route('projects.issues.destroy', [$currentProject, $issue]) }}"
+            <form method="POST" action="{{ route('projects.issues.destroy', [$currentProject->id, $issue->id]) }}"
                 class="mt-4"
                 onsubmit="return confirm('Delete {{ $issue->key }}? This cannot be undone.')">
                 @csrf

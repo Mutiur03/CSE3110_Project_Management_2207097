@@ -8,7 +8,7 @@
             </p>
         </div>
 
-        <form method="POST" action="{{ route('projects.issues.store', $currentProject) }}"
+        <form method="POST" action="{{ route('projects.issues.store', $currentProject->id) }}"
             class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
             @csrf
 
@@ -18,7 +18,7 @@
                 'teams' => $teams,
                 'parentIssues' => $parentIssues,
                 'submitLabel' => 'Create issue',
-                'cancelUrl' => route('projects.issues.index', $currentProject),
+                'cancelUrl' => route('projects.issues.index', $currentProject->id),
                 'fieldPrefix' => 'create-issue',
             ])
         </form>

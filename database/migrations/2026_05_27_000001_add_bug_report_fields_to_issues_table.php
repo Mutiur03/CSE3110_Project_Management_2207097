@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::table('issues', function (Blueprint $table) {
             $table->string('severity')->nullable()->after('story_points');
-            $table->text('steps_to_reproduce')->nullable()->after('severity');
-            $table->text('expected_result')->nullable()->after('steps_to_reproduce');
-            $table->text('actual_result')->nullable()->after('expected_result');
+            $table->string('steps_to_reproduce', 4000)->nullable()->after('severity');
+            $table->string('expected_result', 4000)->nullable()->after('steps_to_reproduce');
+            $table->string('actual_result', 4000)->nullable()->after('expected_result');
             $table->string('environment')->nullable()->after('actual_result');
         });
     }

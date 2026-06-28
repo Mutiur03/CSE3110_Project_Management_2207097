@@ -6,7 +6,7 @@
         'viewer' => 'Viewer',
         'admin' => 'Admin',
     ];
-    $canManage = $currentProject->userCanManage(auth()->user());
+    $canManage = (bool) ($currentProject->can_manage ?? false);
 @endphp
 
 <x-dashboard.layout title="Members" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
@@ -46,7 +46,7 @@
 
     @if ($canManage)
     <x-dashboard.modal id="add-project-member-modal" title="Add project member" :open="old('_form') === 'add-project-member'">
-        <form method="POST" action="{{ route('projects.members.store', $currentProject) }}" class="space-y-4">
+        <form method="POST" action="{{ route('projects.members.store', $currentProject->id) }}" class="space-y-4">
                 @csrf
                 <input type="hidden" name="_form" value="add-project-member">
 
@@ -101,7 +101,7 @@
                         </div>
                     </div>
 
-                    <p class="text-sm font-semibold text-neutral-600">{{ $roles[$member->pivot->role] ?? $member->pivot->role }}</p>
+                    <p class="text-sm font-semibold text-neutral-600">{{ $roles[$member->role] ?? $member->role }}</p>
 
                     @if ($canManage)
                     <button type="button" data-modal-target="manage-member-{{ $member->id }}"
@@ -110,7 +110,7 @@
                     </button>
 
                     <x-dashboard.modal id="manage-member-{{ $member->id }}" title="Manage {{ $member->name }}">
-                        <form method="POST" action="{{ route('projects.members.update', [$currentProject, $member]) }}" class="space-y-4">
+                        <form method="POST" action="{{ route('projects.members.update', [$currentProject->id, $member->id]) }}" class="space-y-4">
                             @csrf
                             @method('PATCH')
 
@@ -118,7 +118,7 @@
                             <select id="member-{{ $member->id }}-role" name="role"
                                 class="w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                                 @foreach ($roles as $value => $label)
-                                    <option value="{{ $value }}" @selected($member->pivot->role === $value)>{{ $label }}</option>
+                                    <option value="{{ $value }}" @selected($member->role === $value)>{{ $label }}</option>
                                 @endforeach
                             </select>
                             <button type="submit"
@@ -127,7 +127,7 @@
                             </button>
                         </form>
 
-                        <form method="POST" action="{{ route('projects.members.destroy', [$currentProject, $member]) }}" class="mt-4 border-t border-neutral-200 pt-4">
+                        <form method="POST" action="{{ route('projects.members.destroy', [$currentProject->id, $member->id]) }}" class="mt-4 border-t border-neutral-200 pt-4">
                             @csrf
                             @method('DELETE')
 

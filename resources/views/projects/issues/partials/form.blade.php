@@ -64,13 +64,7 @@
                 class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
                 <option value="">Unassigned</option>
                 @foreach ($members as $member)
-                    @php
-                        $memberTeamIds = $member->teams
-                            ->where('project_id', $currentProject->id)
-                            ->pluck('id')
-                            ->implode(',');
-                    @endphp
-                    <option value="{{ $member->id }}" data-team-ids="{{ $memberTeamIds }}" @selected(old('assignee_id', $issue?->assignee_id) === $member->id)>{{ $member->name }}</option>
+                    <option value="{{ $member->id }}" data-team-ids="{{ $member->team_ids ?? '' }}" @selected(old('assignee_id', $issue?->assignee_id) === $member->id)>{{ $member->name }}</option>
                 @endforeach
             </select>
             <p class="mt-2 text-xs text-neutral-500">When a team is selected, only that team's members can be assigned.</p>

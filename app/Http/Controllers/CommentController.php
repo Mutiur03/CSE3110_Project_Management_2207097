@@ -3,92 +3,106 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesProjectMembership;
-use App\Models\ActivityLog;
-use App\Models\Comment;
-use App\Models\Issue;
-use App\Models\Project;
-use App\Notifications\ProjectEventNotification;
+use App\Support\SqlDialect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CommentController extends Controller
 {
     use AuthorizesProjectMembership;
 
-    public function store(Request $request, Project $project, Issue $issue): RedirectResponse
+    public function store(Request $request, string $project, string $issue): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertIssueBelongsToProject($issue, $project);
+
+        $issueRow = DB::selectOne(
+            'SELECT id, key, reporter_id, assignee_id FROM issues WHERE id = ? AND project_id = ?',
+            [$issue, $project],
+        );
+        abort_if($issueRow === null, 404);
 
         $validated = $request->validate([
             'body' => ['required', 'string', 'max:4000'],
         ]);
 
-        $comment = Comment::create([
-            'issue_id' => $issue->id,
-            'user_id' => $request->user()->id,
-            'body' => $validated['body'],
-        ]);
+        $commentId = (string) Str::uuid();
+        $now = now()->toDateTimeString();
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'issue_id' => $issue->id,
-            'user_id' => $request->user()->id,
-            'action' => 'commented on issue',
-            'subject_type' => Comment::class,
-            'subject_id' => $comment->id,
-            'new_values' => [
-                'issue' => $issue->key,
-                'comment' => str($comment->body)->limit(140)->toString(),
+        DB::insert(
+            'INSERT INTO comments (id, issue_id, user_id, body, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)',
+            [
+                $commentId,
+                $issue,
+                $request->user()->id,
+                $validated['body'],
+                $now,
+                $now,
             ],
-        ]);
+        );
 
-        $recipients = collect([$issue->reporter, $issue->assignee])
-            ->filter()
-            ->unique('id');
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'commented on issue',
+            'App\Models\Comment',
+            $commentId,
+            $issue,
+            newValues: [
+                'issue' => $issueRow->key,
+                'comment' => str($validated['body'])->limit(140)->toString(),
+            ],
+        );
 
-        $recipients->each(fn ($user) => (new ProjectEventNotification(
-            'New comment',
-            "{$request->user()->name} commented on {$issue->key}.",
-            route('projects.issues.show', [$project, $issue]),
-            $project->id,
-            $issue->id,
-        ))->sendTo($user));
+        $url = route('projects.issues.show', [$project, $issue]);
+        $userIds = collect([$issueRow->reporter_id, $issueRow->assignee_id])->filter()->unique()->values()->all();
+
+        foreach ($userIds as $userId) {
+            $this->pushNotification(
+                $userId,
+                'New comment',
+                "{$request->user()->name} commented on {$issueRow->key}.",
+                $url,
+                $project,
+                $issue,
+            );
+        }
 
         return redirect()
             ->route('projects.issues.show', [$project, $issue])
             ->with('status', 'Comment added.');
     }
 
-    public function destroy(Request $request, Project $project, Issue $issue, Comment $comment): RedirectResponse
+    public function destroy(Request $request, string $project, string $issue, string $comment): RedirectResponse
     {
         $this->authorizeProjectWrite($request, $project);
-        $this->assertIssueBelongsToProject($issue, $project);
-        abort_unless($comment->issue_id === $issue->id, 404);
 
-        $oldBody = $comment->body;
-        $comment->delete();
+        $issueRow = DB::selectOne('SELECT key FROM issues WHERE id = ? AND project_id = ?', [$issue, $project]);
+        abort_if($issueRow === null, 404);
 
-        ActivityLog::create([
-            'project_id' => $project->id,
-            'issue_id' => $issue->id,
-            'user_id' => $request->user()->id,
-            'action' => 'deleted issue comment',
-            'subject_type' => Comment::class,
-            'subject_id' => $comment->id,
-            'old_values' => [
-                'issue' => $issue->key,
-                'comment' => str($oldBody)->limit(40)->toString(),
+        $commentRow = DB::selectOne('SELECT body FROM comments WHERE id = ? AND issue_id = ?', [$comment, $issue]);
+        abort_if($commentRow === null, 404);
+        SqlDialect::normalizeComment($commentRow);
+
+        DB::delete('DELETE FROM comments WHERE id = ?', [$comment]);
+
+        $this->logActivity(
+            $project,
+            $request->user()->id,
+            'deleted issue comment',
+            'App\Models\Comment',
+            $comment,
+            $issue,
+            oldValues: [
+                'issue' => $issueRow->key,
+                'comment' => str($commentRow->body)->limit(40)->toString(),
             ],
-        ]);
+        );
 
         return redirect()
             ->route('projects.issues.show', [$project, $issue])
             ->with('status', 'Comment deleted.');
-    }
-
-    private function assertIssueBelongsToProject(Issue $issue, Project $project): void
-    {
-        abort_unless($issue->project_id === $project->id, 404);
     }
 }
