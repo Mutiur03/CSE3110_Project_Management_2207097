@@ -90,10 +90,7 @@ class BoardController extends Controller
 
         $oldStatus = $issueRow->status;
 
-        DB::update(
-            'UPDATE issues SET status = ?, updated_at = ? WHERE id = ?',
-            [$validated['status'], now()->toDateTimeString(), $issue],
-        );
+        SqlDialect::updateIssueStatus($issue, $validated['status']);
 
         $this->logActivity(
             $project,

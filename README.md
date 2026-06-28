@@ -168,6 +168,8 @@ BEGIN
 END;
 ```
 
+The Laravel app also calls these objects from PHP: `count_open_issues` on the dashboard (`DashboardController`) and `update_issue_status` when moving issues on the board, editing an issue, or changing sprint membership (`SqlDialect::updateIssueStatus()`).
+
 ---
 
 ### Step 6 — Build frontend and run the app

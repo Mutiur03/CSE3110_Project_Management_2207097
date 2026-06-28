@@ -232,9 +232,13 @@ class IssueController extends Controller
         $oldAssigneeId = $issueRow->assignee_id;
         $oldStatus = $issueRow->status;
 
+        if ($validated['status'] !== $oldStatus) {
+            SqlDialect::updateIssueStatus($issue, $validated['status']);
+        }
+
         DB::update(
             'UPDATE issues
-             SET title = ?, description = ?, type = ?, status = ?, priority = ?,
+             SET title = ?, description = ?, type = ?, priority = ?,
                  assignee_id = ?, team_id = ?, parent_issue_id = ?, story_points = ?,
                  severity = ?, steps_to_reproduce = ?, expected_result = ?,
                  actual_result = ?, environment = ?, updated_at = ?
@@ -243,7 +247,6 @@ class IssueController extends Controller
                 $validated['title'],
                 $validated['description'] ?? null,
                 $validated['type'],
-                $validated['status'],
                 $validated['priority'],
                 $validated['assignee_id'] ?? null,
                 $validated['team_id'] ?? null,

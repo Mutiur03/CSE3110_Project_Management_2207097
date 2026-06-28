@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class SqlDialect
 {
@@ -40,6 +41,11 @@ class SqlDialect
         return 'SELECT MAX(TO_NUMBER(SUBSTR(i.key, LENGTH(?) + 2))) AS last_number
                 FROM issues i
                 WHERE i.project_id = ? AND i.key LIKE ?';
+    }
+
+    public static function updateIssueStatus(string $issueId, string $status): void
+    {
+        DB::statement('BEGIN update_issue_status(?, ?); END;', [$issueId, $status]);
     }
 
     public static function clobToString(mixed $value): ?string

@@ -209,11 +209,13 @@ class SprintController extends Controller
         }
 
         $newStatus = $issue->status === 'backlog' ? 'selected' : $issue->status;
+        $now = now()->toDateTimeString();
 
         DB::update(
-            'UPDATE issues SET sprint_id = ?, status = ?, updated_at = ? WHERE id = ?',
-            [$sprint, $newStatus, now()->toDateTimeString(), $issue->id],
+            'UPDATE issues SET sprint_id = ?, updated_at = ? WHERE id = ?',
+            [$sprint, $now, $issue->id],
         );
+        SqlDialect::updateIssueStatus($issue->id, $newStatus);
 
         $this->logActivity(
             $project,
@@ -246,10 +248,13 @@ class SprintController extends Controller
         );
         abort_if($issueRow === null || $issueRow->sprint_id !== $sprint, 404);
 
+        $now = now()->toDateTimeString();
+
         DB::update(
-            "UPDATE issues SET sprint_id = NULL, status = 'backlog', updated_at = ? WHERE id = ?",
-            [now()->toDateTimeString(), $issue],
+            'UPDATE issues SET sprint_id = NULL, updated_at = ? WHERE id = ?',
+            [$now, $issue],
         );
+        SqlDialect::updateIssueStatus($issue, 'backlog');
 
         $this->logActivity(
             $project,
@@ -335,11 +340,18 @@ class SprintController extends Controller
 
         $now = now()->toDateTimeString();
 
-        DB::update(
-            "UPDATE issues SET sprint_id = NULL, status = 'backlog', updated_at = ?
-             WHERE sprint_id = ? AND status != 'done'",
-            [$now, $sprint],
+        $incompleteIssues = DB::select(
+            "SELECT id FROM issues WHERE sprint_id = ? AND status != 'done'",
+            [$sprint],
         );
+
+        foreach ($incompleteIssues as $incompleteIssue) {
+            DB::update(
+                'UPDATE issues SET sprint_id = NULL, updated_at = ? WHERE id = ?',
+                [$now, $incompleteIssue->id],
+            );
+            SqlDialect::updateIssueStatus($incompleteIssue->id, 'backlog');
+        }
 
         DB::update(
             "UPDATE sprints SET status = 'completed', updated_at = ? WHERE id = ?",

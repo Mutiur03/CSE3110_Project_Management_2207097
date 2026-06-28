@@ -86,7 +86,7 @@ class DashboardController extends Controller
         $sprintProgress = $sprintIssueCount > 0 ? round(($doneIssueCount / $sprintIssueCount) * 100) : 0;
 
         $openIssues = (int) (DB::selectOne(
-            "SELECT COUNT(*) AS total FROM issues WHERE project_id = ? AND status != 'done'",
+            'SELECT count_open_issues(?) AS total'.SqlDialect::dualFrom(),
             [$projectId],
         )->total ?? 0);
 
