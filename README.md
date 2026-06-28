@@ -123,7 +123,7 @@ php artisan config:clear
 php artisan migrate --seed
 ```
 
-Migrations use **raw Oracle SQL** (`DB::unprepared`) for tables, foreign keys, and PL/SQL objects (`count_open_issues` function, `update_issue_status` procedure, `trg_project_members_role_chk` trigger). Bug-report columns are included in the main `issues` table migration.
+Migrations use **raw Oracle SQL** (`DB::unprepared`) for tables, foreign keys, and PL/SQL objects (`count_open_issues` function, `update_issue_status` and `rollup_parent_issue_status` procedures, `trg_issues_status_rollup` and `trg_project_members_role_chk` triggers). Bug-report columns are included in the main `issues` table migration.
 
 The same PL/SQL is also saved in `database/oracle/scrum_plsql.sql` if you want to run or inspect it in SQL Developer.
 
@@ -140,6 +140,8 @@ If migration fails:
 
 - **`count_open_issues`** — function that counts non-done issues for a project
 - **`update_issue_status`** — procedure that updates an issue status
+- **`rollup_parent_issue_status`** — procedure that recomputes a parent issue status from its children (story/task under epic, subtask under story/task)
+- **`trg_issues_status_rollup`** — trigger on `issues.status` that calls the rollup procedure when a child status changes
 - **`trg_project_members_role_chk`** — trigger that validates project member roles
 
 Optional: open `database/oracle/scrum_plsql.sql` in SQL Developer to review or re-run the same objects manually.

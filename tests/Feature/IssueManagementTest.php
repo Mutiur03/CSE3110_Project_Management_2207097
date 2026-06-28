@@ -6,6 +6,7 @@ use App\Models\Issue;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\SqlDialect;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -732,6 +733,35 @@ class IssueManagementTest extends TestCase
 
         $response->assertForbidden();
         $this->assertDatabaseHas('issues', ['id' => $issue->id]);
+    }
+
+    public function test_child_status_change_rolls_up_parent_and_epic_status(): void
+    {
+        [$owner, $project] = $this->createProjectWithOwner();
+        $epic = $this->createIssue($project, $owner, [
+            'key' => 'CP-1',
+            'title' => 'Platform Epic',
+            'type' => 'epic',
+        ]);
+        $story = $this->createIssue($project, $owner, [
+            'key' => 'CP-2',
+            'title' => 'Story under epic',
+            'type' => 'story',
+            'parent_issue_id' => $epic->id,
+            'story_points' => 3,
+        ]);
+        $subtask = $this->createIssue($project, $owner, [
+            'key' => 'CP-3',
+            'title' => 'Subtask under story',
+            'type' => 'subtask',
+            'parent_issue_id' => $story->id,
+        ]);
+
+        SqlDialect::updateIssueStatus($subtask->id, 'in_progress');
+
+        $this->assertDatabaseHas('issues', ['id' => $subtask->id, 'status' => 'in_progress']);
+        $this->assertDatabaseHas('issues', ['id' => $story->id, 'status' => 'in_progress']);
+        $this->assertDatabaseHas('issues', ['id' => $epic->id, 'status' => 'in_progress']);
     }
 
     private function createProjectWithOwner(): array
