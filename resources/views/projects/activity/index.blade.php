@@ -1,43 +1,47 @@
+@php
+    use App\Support\BadgeTones;
+@endphp
+
 <x-dashboard.layout title="Activity" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
-    <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <section class="rounded-lg border border-hairline bg-white p-5">
         <div class="flex flex-wrap items-center gap-2">
-            <span class="rounded-md bg-neutral-950 px-2.5 py-1 text-xs font-bold text-white">{{ $currentProject->key }}</span>
-            <span class="rounded-md bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-700">Project history</span>
+            <x-ui.key-badge :label="$currentProject->key" />
+            <x-ui.badge :tone="BadgeTones::NEUTRAL">Project history</x-ui.badge>
         </div>
-        <h2 class="mt-3 text-2xl font-bold tracking-normal text-neutral-950">Activity timeline</h2>
-        <p class="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-            Track important project, sprint, issue, board, and comment changes in one place.
-        </p>
+        <h2 class="mt-3 font-display text-2xl font-bold tracking-tight text-ink">Activity timeline</h2>
     </section>
 
-    <section class="mt-6 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
+    <section class="mt-6 overflow-hidden rounded-lg border border-hairline bg-white">
         @forelse ($activities as $activity)
-            <article class="border-b border-neutral-100 p-5 last:border-b-0">
+            <article class="border-b border-hairline p-5 last:border-b-0">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-700">{{ $activity->action }}</span>
-                            @if ($activity->issue_id && $activity->issue_key)
-                                <a href="{{ route('projects.issues.show', [$currentProject->id, $activity->issue_id]) }}" wire:navigate
-                                    class="text-xs font-bold text-blue-600 underline-offset-4 hover:underline">
-                                    {{ $activity->issue_key }}
-                                </a>
+                    <div class="flex min-w-0 gap-3">
+                        <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent"></span>
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <x-ui.badge :tone="BadgeTones::NEUTRAL">{{ $activity->action }}</x-ui.badge>
+                                @if ($activity->issue_id && $activity->issue_key)
+                                    <a href="{{ route('projects.issues.show', [$currentProject->id, $activity->issue_id]) }}" wire:navigate
+                                        class="font-mono text-xs text-accent transition hover:text-accent-strong">
+                                        {{ $activity->issue_key }}
+                                    </a>
+                                @endif
+                            </div>
+                            <p class="mt-2 text-sm font-semibold text-ink">{{ $activity->user_name ?? 'System' }}</p>
+                            @if ($activity->new_values || $activity->old_values)
+                                <p class="mt-2 line-clamp-2 text-sm leading-6 text-neutral-500">
+                                    {{ collect($activity->new_values ?? $activity->old_values)->map(fn ($value, $key) => str_replace('_', ' ', $key) . ': ' . (is_scalar($value) ? $value : json_encode($value)))->join(' | ') }}
+                                </p>
                             @endif
                         </div>
-                        <p class="mt-2 text-sm font-semibold text-neutral-950">{{ $activity->user_name ?? 'System' }}</p>
-                        @if ($activity->new_values || $activity->old_values)
-                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-neutral-600">
-                                {{ collect($activity->new_values ?? $activity->old_values)->map(fn ($value, $key) => str_replace('_', ' ', $key) . ': ' . (is_scalar($value) ? $value : json_encode($value)))->join(' | ') }}
-                            </p>
-                        @endif
                     </div>
-                    <time class="shrink-0 text-xs font-semibold text-neutral-500" datetime="{{ $activity->created_at }}">
+                    <time class="shrink-0 font-mono text-xs text-neutral-400" datetime="{{ $activity->created_at }}">
                         {{ $activity->created_at_human }}
                     </time>
                 </div>
             </article>
         @empty
-            <div class="p-6 text-sm text-neutral-500">No activity recorded yet.</div>
+            <div class="p-6 text-sm text-neutral-500">No activity yet.</div>
         @endforelse
     </section>
 

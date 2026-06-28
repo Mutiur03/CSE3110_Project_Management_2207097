@@ -1,16 +1,15 @@
 @php
-    $statusTones = [
-        'planned' => 'bg-amber-100 text-amber-700',
-        'active' => 'bg-emerald-100 text-emerald-700',
-        'completed' => 'bg-neutral-100 text-neutral-700',
-    ];
+    use App\Support\BadgeTones;
 
-    $issueTypeTones = [
-        'epic' => 'bg-purple-100 text-purple-700',
-        'story' => 'bg-sky-100 text-sky-700',
-        'task' => 'bg-emerald-100 text-emerald-700',
-        'subtask' => 'bg-amber-100 text-amber-700',
-        'bug' => 'bg-rose-100 text-rose-700',
+    $statusTones = BadgeTones::sprintStatus();
+    $issueTypeTones = BadgeTones::issueType();
+
+    $issueTypeSpine = [
+        'epic' => 'border-l-border',
+        'story' => 'border-l-border',
+        'task' => 'border-l-border',
+        'subtask' => 'border-l-border',
+        'bug' => 'border-l-border',
     ];
 
     $activeSprint = $sprints->firstWhere('status', 'active');
@@ -18,38 +17,30 @@
 @endphp
 
 <x-dashboard.layout title="Sprints" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
-    <div class="grid gap-6 xl:grid-cols-[1fr_22rem]">
-        <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <div>
+        <section class="rounded-lg border border-hairline bg-white p-5">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="rounded-md bg-neutral-950 px-2.5 py-1 text-xs font-bold text-white">{{ $currentProject->key }}</span>
-                        <span class="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">{{ $sprints->count() }} sprints</span>
+                        <x-ui.key-badge :label="$currentProject->key" />
+                        <span class="font-mono text-xs text-neutral-400">{{ $sprints->count() }} sprints</span>
                     </div>
-                    <h2 class="mt-3 text-2xl font-bold tracking-normal text-neutral-950">Sprint planning</h2>
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-                        Create sprints, pull issues from the backlog, start the active sprint, and complete it when the work cycle ends.
-                    </p>
+                    <h2 class="mt-3 font-display text-2xl font-bold tracking-tight text-ink">Sprint planning</h2>
                 </div>
                 <div class="flex gap-2">
                     @if ($canWrite)
                     <button type="button" data-modal-target="create-sprint-modal"
-                        class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                        class="inline-flex justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong">
                         Create sprint
                     </button>
                     @endif
                     <a href="{{ route('projects.issues.index', $currentProject->id) }}" wire:navigate
-                        class="inline-flex justify-center rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
+                        class="inline-flex justify-center rounded-md border border-hairline bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink">
                         Backlog
                     </a>
                 </div>
             </div>
         </section>
-
-        <aside class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-            <h3 class="text-sm font-bold text-neutral-950">Planning rule</h3>
-            <p class="mt-2 text-sm leading-6 text-neutral-600">Sprints pull selected backlog issues into a focused work cycle.</p>
-        </aside>
     </div>
 
     @error('sprint')
@@ -62,35 +53,35 @@
                 @csrf
 
                 <div>
-                    <label for="name" class="block text-sm font-semibold text-neutral-950">Sprint name</label>
+                    <label for="name" class="block text-sm font-semibold text-ink">Sprint name</label>
                     <input id="name" name="name" type="text" value="{{ old('name') }}" required
-                        class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                        class="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                     @error('name')
                         <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div>
-                    <label for="goal" class="block text-sm font-semibold text-neutral-950">Goal</label>
+                    <label for="goal" class="block text-sm font-semibold text-ink">Goal</label>
                     <textarea id="goal" name="goal" rows="3"
-                        class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">{{ old('goal') }}</textarea>
+                        class="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">{{ old('goal') }}</textarea>
                 </div>
 
                 <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                     <div>
-                        <label for="start_date" class="block text-sm font-semibold text-neutral-950">Start</label>
+                        <label for="start_date" class="block text-sm font-semibold text-ink">Start</label>
                         <input id="start_date" name="start_date" type="date" value="{{ old('start_date') }}"
-                            class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                            class="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                     </div>
                     <div>
-                        <label for="end_date" class="block text-sm font-semibold text-neutral-950">End</label>
+                        <label for="end_date" class="block text-sm font-semibold text-ink">End</label>
                         <input id="end_date" name="end_date" type="date" value="{{ old('end_date') }}"
-                            class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                            class="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                     </div>
                 </div>
 
                 <button type="submit"
-                    class="inline-flex w-full justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                    class="inline-flex w-full justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong">
                     Create sprint
                 </button>
         </form>
@@ -104,30 +95,40 @@
                 $doneCount = $sprint->issues->where('status', 'done')->count();
                 $openCount = $sprint->issues->where('status', '!=', 'done')->count();
             @endphp
-            <article class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+            <article class="rounded-lg border border-hairline bg-white p-5">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="rounded px-2.5 py-1 text-xs font-bold {{ $statusTones[$sprint->status] ?? 'bg-neutral-100 text-neutral-700' }}">
+                            <x-ui.badge :tone="$statusTones[$sprint->status] ?? BadgeTones::NEUTRAL">
                                 {{ ucfirst($sprint->status) }}
-                            </span>
-                            <span class="rounded bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-700">{{ $sprint->issues_count }} issues</span>
-                            <span class="rounded bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-700">{{ $sprintPoints }} pts</span>
-                            <span class="rounded bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">{{ $doneCount }} done</span>
-                            <span class="rounded bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">{{ $openCount }} open</span>
+                            </x-ui.badge>
+                            <span class="font-mono text-xs text-neutral-400">{{ $sprint->issues_count }} issues</span>
+                            <span class="font-mono text-xs text-neutral-400">{{ $sprintPoints }} pts</span>
+                            <span class="font-mono text-xs text-neutral-400">{{ $doneCount }} done</span>
+                            <span class="font-mono text-xs text-neutral-400">{{ $openCount }} open</span>
                         </div>
-                        <h3 class="mt-3 text-lg font-bold text-neutral-950">{{ $sprint->name }}</h3>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">{{ $sprint->goal ?: 'No sprint goal added.' }}</p>
-                        <p class="mt-2 text-xs font-semibold text-neutral-500">
+                        <h3 class="mt-3 font-display text-lg font-bold text-ink">{{ $sprint->name }}</h3>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-neutral-500">{{ $sprint->goal ?: 'No sprint goal added.' }}</p>
+                        <p class="mt-2 font-mono text-xs text-neutral-400">
                             {{ $sprint->start_date?->format('M d, Y') ?? 'No start date' }} -
                             {{ $sprint->end_date?->format('M d, Y') ?? 'No end date' }}
                         </p>
+                        @php $sprintPct = $sprint->issues_count > 0 ? (int) round($doneCount / $sprint->issues_count * 100) : 0; @endphp
+                        <div class="mt-4 max-w-md">
+                            <div class="mb-1 flex items-center justify-between font-mono text-[11px] text-neutral-400">
+                                <span>{{ $doneCount }}/{{ $sprint->issues_count }} done</span>
+                                <span>{{ $sprintPct }}%</span>
+                            </div>
+                            <div class="h-1.5 overflow-hidden rounded-full bg-canvas">
+                                <div class="h-full rounded-full bg-accent" style="width: {{ max(2, $sprintPct) }}%"></div>
+                            </div>
+                        </div>
                     </div>
 
                     @if ($canWrite)
                     <div class="flex flex-wrap gap-2">
                         <button type="button" data-modal-target="edit-sprint-{{ $sprint->id }}"
-                            class="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
+                            class="rounded-md border border-hairline bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-ink">
                             Edit
                         </button>
 
@@ -142,7 +143,7 @@
                                 @endif
                                 <button type="submit"
                                     @disabled($sprint->issues_count === 0)
-                                    class="rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300">
+                                    class="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:bg-neutral-300">
                                     Start
                                 </button>
                             </form>
@@ -152,7 +153,7 @@
                             <form method="POST" action="{{ route('projects.sprints.complete', [$currentProject->id, $sprint->id]) }}">
                                 @csrf
                                 <button type="submit"
-                                    class="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
+                                    class="rounded-md border border-hairline bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-ink">
                                     Complete
                                 </button>
                             </form>
@@ -168,32 +169,32 @@
                         @method('PATCH')
 
                         <div>
-                            <label for="sprint-{{ $sprint->id }}-name" class="block text-sm font-semibold text-neutral-950">Sprint name</label>
+                            <label for="sprint-{{ $sprint->id }}-name" class="block text-sm font-semibold text-ink">Sprint name</label>
                             <input id="sprint-{{ $sprint->id }}-name" name="name" type="text" value="{{ old('name', $sprint->name) }}" required
-                                class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                                class="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                         </div>
 
                         <div>
-                            <label for="sprint-{{ $sprint->id }}-goal" class="block text-sm font-semibold text-neutral-950">Goal</label>
+                            <label for="sprint-{{ $sprint->id }}-goal" class="block text-sm font-semibold text-ink">Goal</label>
                             <textarea id="sprint-{{ $sprint->id }}-goal" name="goal" rows="3"
-                                class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">{{ old('goal', $sprint->goal) }}</textarea>
+                                class="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">{{ old('goal', $sprint->goal) }}</textarea>
                         </div>
 
                         <div class="grid gap-3 sm:grid-cols-2">
                             <div>
-                                <label for="sprint-{{ $sprint->id }}-start" class="block text-sm font-semibold text-neutral-950">Start</label>
+                                <label for="sprint-{{ $sprint->id }}-start" class="block text-sm font-semibold text-ink">Start</label>
                                 <input id="sprint-{{ $sprint->id }}-start" name="start_date" type="date" value="{{ old('start_date', $sprint->start_date?->format('Y-m-d')) }}"
-                                    class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                                    class="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                             </div>
                             <div>
-                                <label for="sprint-{{ $sprint->id }}-end" class="block text-sm font-semibold text-neutral-950">End</label>
+                                <label for="sprint-{{ $sprint->id }}-end" class="block text-sm font-semibold text-ink">End</label>
                                 <input id="sprint-{{ $sprint->id }}-end" name="end_date" type="date" value="{{ old('end_date', $sprint->end_date?->format('Y-m-d')) }}"
-                                    class="mt-2 w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                                    class="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                             </div>
                         </div>
 
                         <button type="submit"
-                            class="inline-flex w-full justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                            class="inline-flex w-full justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong">
                             Save sprint
                         </button>
                     </form>
@@ -202,19 +203,19 @@
 
                 <div class="mt-5 grid gap-5 xl:grid-cols-[1fr_20rem]">
                     <div>
-                        <p class="text-sm font-bold text-neutral-950">Sprint issues</p>
+                        <p class="deck-label text-neutral-400">Sprint issues</p>
                         <div class="mt-3 space-y-2">
                             @forelse ($sprint->issues as $issue)
-                                <div class="flex flex-col gap-3 rounded-md border border-neutral-200 bg-stone-50 p-3 sm:flex-row sm:items-center">
+                                <div class="flex flex-col gap-3 rounded-md border border-hairline border-l-2 bg-canvas p-3 sm:flex-row sm:items-center {{ $issueTypeSpine[$issue->type] ?? 'border-l-neutral-300' }}">
                                     <div class="min-w-0 flex-1">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <span class="text-xs font-bold text-neutral-500">{{ $issue->key }}</span>
-                                            <span class="rounded px-2 py-1 text-[10px] font-bold {{ $issueTypeTones[$issue->type] ?? 'bg-neutral-100 text-neutral-700' }}">{{ strtoupper($issue->type) }}</span>
+                                            <span class="font-mono text-xs text-neutral-400">{{ $issue->key }}</span>
+                                            <x-ui.badge :tone="$issueTypeTones[$issue->type] ?? BadgeTones::NEUTRAL">{{ strtoupper($issue->type) }}</x-ui.badge>
                                             @if ($issue->story_points)
-                                                <span class="rounded bg-white px-2 py-1 text-[10px] font-bold text-neutral-600">{{ $issue->story_points }} pts</span>
+                                                <span class="font-mono text-xs text-neutral-400">{{ $issue->story_points }} pts</span>
                                             @endif
                                         </div>
-                                        <p class="mt-2 truncate text-sm font-semibold text-neutral-950">{{ $issue->title }}</p>
+                                        <p class="mt-2 truncate text-sm font-semibold text-ink">{{ $issue->title }}</p>
                                         <p class="mt-1 text-xs text-neutral-500">{{ $issue->assignee_name ?? 'Unassigned' }} · {{ $issue->team_name ?? 'No team' }}</p>
                                     </div>
                                     @if ($canWrite && $sprint->status !== 'completed')
@@ -228,8 +229,8 @@
                                     @endif
                                 </div>
                             @empty
-                                <p class="rounded-md border border-dashed border-neutral-300 bg-stone-50 p-4 text-sm text-neutral-600">
-                                    No issues selected for this sprint yet.
+                                <p class="rounded-md border border-dashed border-hairline bg-canvas p-4 text-sm text-neutral-500">
+                                    No issues in this sprint yet.
                                 </p>
                             @endforelse
                         </div>
@@ -237,27 +238,23 @@
 
                     @if ($canWrite && $sprint->status !== 'completed')
                         <form method="POST" action="{{ route('projects.sprints.issues.store', [$currentProject->id, $sprint->id]) }}"
-                            class="rounded-lg border border-neutral-200 bg-stone-50 p-4">
+                            class="rounded-lg border border-hairline bg-canvas p-4">
                             @csrf
 
-                            <label for="sprint-{{ $sprint->id }}-issue" class="block text-sm font-bold text-neutral-950">Add backlog issue</label>
+                            <label for="sprint-{{ $sprint->id }}-issue" class="deck-label block text-neutral-400">Add backlog issue</label>
                             @error('issue_id')
                                 <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
                             @enderror
                             <select id="sprint-{{ $sprint->id }}-issue" name="issue_id" required
-                                class="mt-3 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">
+                                class="mt-3 w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                                 <option value="">Select issue</option>
                                 @foreach ($backlogIssues as $issue)
                                     <option value="{{ $issue->id }}">{{ $issue->key }} [{{ strtoupper($issue->type) }}] {{ $issue->title }}{{ $issue->story_points ? ' - ' . $issue->story_points . ' pts' : '' }}</option>
                                 @endforeach
                             </select>
 
-                            <p class="mt-2 text-xs leading-5 text-neutral-500">
-                                Epics stay as backlog containers. Add stories, tasks, subtasks, or bugs to sprint work.
-                            </p>
-
                             <button type="submit"
-                                class="mt-3 inline-flex w-full justify-center rounded-md bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                class="mt-3 inline-flex w-full justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong">
                                 Add to sprint
                             </button>
                         </form>
@@ -265,8 +262,8 @@
                 </div>
             </article>
         @empty
-            <div class="rounded-lg border border-dashed border-neutral-300 bg-white p-6 text-sm text-neutral-600">
-                No sprints have been created for this project yet.
+            <div class="rounded-lg border border-dashed border-hairline bg-white p-6 text-sm text-neutral-500">
+                No sprints yet.
             </div>
         @endforelse
     </div>

@@ -4,9 +4,17 @@
     'typeTones',
     'priorityTones',
     'statusLabels',
+    'issueTypeSpine' => [],
+    'statusTones' => [],
     'indent' => 0,
     'hasChildren' => false,
 ])
+
+@php
+    use App\Support\BadgeTones;
+
+    $priorityBadgeTones = BadgeTones::issuePriority();
+@endphp
 
 @php
     $indentClass = [
@@ -39,11 +47,11 @@
 <div data-backlog-row
      data-issue-id="{{ $issue->id }}"
      data-parent-id="{{ $issue->parent_issue_id }}"
-     class="group grid grid-cols-[minmax(24rem,1fr)_13rem_13rem_9rem_8rem] border-b border-neutral-100 text-sm text-neutral-700 transition hover:bg-stone-50">
-    <div class="relative min-w-0 border-r border-neutral-100 px-3 py-2.5 {{ $indentClass }} {{ $lineClass }}">
+     class="group grid grid-cols-[minmax(24rem,1fr)_13rem_13rem_9rem_8rem] border-b border-l-2 border-hairline text-sm text-neutral-700 transition hover:bg-canvas {{ $issueTypeSpine[$issue->type] ?? 'border-l-border' }}">
+    <div class="relative min-w-0 border-r border-hairline px-3 py-2.5 {{ $indentClass }} {{ $lineClass }}">
         <div class="flex min-w-0 items-center gap-2">
             @if ($hasChildren)
-                <button type="button" class="fold-toggle shrink-0 flex items-center justify-center size-5 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors focus:outline-none" data-toggle-for="{{ $issue->id }}" aria-label="Toggle children">
+                <button type="button" class="fold-toggle shrink-0 flex items-center justify-center size-5 rounded hover:bg-muted text-muted-foreground hover:text-ink transition-colors focus:outline-none" data-toggle-for="{{ $issue->id }}" aria-label="Toggle children">
                     <svg class="size-3.5 transition-transform duration-200" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
                     </svg>
@@ -58,23 +66,23 @@
             </svg>
 
             <a href="{{ route('projects.issues.show', [$currentProject->id, $issue->id]) }}" wire:navigate
-                class="shrink-0 font-semibold text-blue-600 underline-offset-4 hover:underline">
+                class="shrink-0 font-mono text-xs text-neutral-400 transition hover:text-accent">
                 {{ $issue->key }}
             </a>
 
             <a href="{{ route('projects.issues.show', [$currentProject->id, $issue->id]) }}" wire:navigate
-                class="min-w-0 flex-1 truncate font-semibold text-neutral-950">
+                class="min-w-0 flex-1 truncate font-semibold text-ink">
                 {{ $issue->title }}
             </a>
 
             @if ($issue->story_points)
-                <span class="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-bold text-neutral-600">{{ $issue->story_points }}</span>
+                <x-ui.badge class="shrink-0" :tone="BadgeTones::storyPoints()">{{ $issue->story_points }}</x-ui.badge>
             @endif
         </div>
     </div>
 
-    <div class="flex min-w-0 items-center gap-2 border-r border-neutral-100 px-3 py-2.5">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-500">
+    <div class="flex min-w-0 items-center gap-2 border-r border-hairline px-3 py-2.5">
+        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                 stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.5 20.25a7.5 7.5 0 0 1 15 0" />
@@ -83,24 +91,22 @@
         <span class="truncate font-medium">{{ $issue->assignee_name ?? 'Unassigned' }}</span>
     </div>
 
-    <div class="flex min-w-0 items-center gap-2 border-r border-neutral-100 px-3 py-2.5">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+    <div class="flex min-w-0 items-center gap-2 border-r border-hairline px-3 py-2.5">
+        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-foreground">
             {{ strtoupper($initials) }}
         </span>
         <span class="truncate font-medium">{{ $issue->reporter_name ?? 'Unknown' }}</span>
     </div>
 
-    <div class="flex items-center gap-2 border-r border-neutral-100 px-3 py-2.5">
-        <svg class="size-4 {{ $priorityTones[$issue->priority] ?? 'text-neutral-500' }}" xmlns="http://www.w3.org/2000/svg" fill="none"
-            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 12h14M5 16h14" />
-        </svg>
-        <span class="font-medium capitalize">{{ $issue->priority }}</span>
+    <div class="flex items-center gap-2 border-r border-hairline px-3 py-2.5">
+        <x-ui.badge :tone="$priorityBadgeTones[$issue->priority] ?? BadgeTones::NEUTRAL">
+            {{ $issue->priority }}
+        </x-ui.badge>
     </div>
 
     <div class="flex items-center px-3 py-2.5">
-        <span class="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs font-bold uppercase text-neutral-700">
+        <x-ui.badge :tone="$statusTones[$issue->status] ?? BadgeTones::NEUTRAL">
             {{ $statusLabels[$issue->status] ?? $issue->status }}
-        </span>
+        </x-ui.badge>
     </div>
 </div>

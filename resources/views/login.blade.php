@@ -3,55 +3,54 @@
         Login
     </x-slot:title>
 
-    <main class="min-h-screen bg-stone-50 px-4 py-4 font-sans text-neutral-950 sm:px-6 sm:py-6 lg:px-8">
+    <main class="min-h-screen bg-canvas px-4 py-4 font-sans text-ink sm:px-6 sm:py-6 lg:px-8">
         <div class="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-6xl items-center sm:min-h-[calc(100vh-3rem)]">
             <div
-                class="grid w-full overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm lg:min-h-180 lg:grid-cols-[1fr_0.95fr]">
+                class="grid w-full overflow-hidden rounded-lg border border-hairline bg-white lg:min-h-180 lg:grid-cols-[1fr_0.95fr]">
                 <section
-                    class="hidden flex-col gap-8 border-b border-neutral-200 bg-stone-100 p-5 sm:p-8 lg:flex lg:border-b-0 lg:border-r lg:p-10">
+                    class="hidden flex-col gap-8 border-b border-hairline bg-canvas p-5 sm:p-8 lg:flex lg:border-b-0 lg:border-r lg:p-10">
                     <a href="{{ url('/') }}" wire:navigate
-                        class="flex w-fit items-center gap-3 font-semibold tracking-tight text-neutral-950">
+                        class="flex w-fit items-center gap-3 font-semibold tracking-tight text-ink">
                         <img src="{{ asset('scrumlab-icon.svg') }}" alt="" class="size-10 shrink-0">
-                        <span>{{ config('app.name') }}</span>
+                        <span class="font-display tracking-tight">{{ config('app.name') }}</span>
                     </a>
 
                     <div class="max-w-xl lg:my-auto">
-                        <p class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Project
-                            workspace</p>
+                        <p class="deck-label text-accent">Welcome back</p>
                         <h1
-                            class="text-3xl font-bold leading-tight tracking-normal text-neutral-950 min-[420px]:text-4xl sm:text-5xl">
+                            class="mt-4 font-display text-3xl font-bold leading-tight tracking-tight text-ink min-[420px]:text-4xl sm:text-5xl">
                             Pick up your sprint exactly where the team left it.
                         </h1>
-                        <p class="mt-5 max-w-lg text-sm leading-6 text-neutral-600 sm:text-base sm:leading-7">
+                        <p class="mt-5 max-w-lg text-sm leading-6 text-neutral-500 sm:text-base sm:leading-7">
                             Sign in to manage projects, review sprint boards, update issues, and keep team progress
                             visible.
                         </p>
                     </div>
 
-                    <div class="rounded-lg border border-neutral-200 bg-white p-4">
+                    <div class="rounded-lg border border-hairline bg-white p-4">
                         <div class="mb-4 flex items-center justify-between gap-3">
                             <div>
-                                <p class="text-sm font-semibold text-neutral-950">Sprint board</p>
-                                <p class="text-xs text-neutral-500">Campus Portal &middot; Sprint 02</p>
+                                <p class="font-display text-sm font-semibold tracking-tight text-ink">Sprint board</p>
+                                <p class="font-mono text-xs text-neutral-400">Campus Portal &middot; Sprint 02</p>
                             </div>
                             <span
-                                class="shrink-0 rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-700">68%</span>
+                                class="shrink-0 rounded-md bg-canvas px-2.5 py-1 font-mono text-xs font-semibold text-neutral-500">68%</span>
                         </div>
 
                         <div class="grid gap-3 min-[520px]:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                            <div class="rounded-md border border-neutral-200 bg-stone-50 p-3">
-                                <p class="mb-3 text-xs font-semibold text-neutral-500">Backlog</p>
-                                <div class="rounded-md border border-neutral-200 bg-white p-3 text-sm font-medium">
+                            <div class="rounded-md border border-hairline bg-canvas p-3">
+                                <p class="deck-label mb-3 text-neutral-400">Backlog</p>
+                                <div class="rounded-md border border-l-2 border-hairline border-l-border bg-white p-3 text-sm font-medium">
                                     Invite team members</div>
                             </div>
-                            <div class="rounded-md border border-neutral-200 bg-stone-50 p-3">
-                                <p class="mb-3 text-xs font-semibold text-neutral-500">In progress</p>
-                                <div class="rounded-md border border-neutral-200 bg-white p-3 text-sm font-medium">
+                            <div class="rounded-md border border-hairline bg-canvas p-3">
+                                <p class="deck-label mb-3 text-neutral-400">In progress</p>
+                                <div class="rounded-md border border-l-2 border-hairline border-l-border bg-white p-3 text-sm font-medium">
                                     Sprint planning panel</div>
                             </div>
-                            <div class="rounded-md border border-neutral-200 bg-stone-50 p-3">
-                                <p class="mb-3 text-xs font-semibold text-neutral-500">Done</p>
-                                <div class="rounded-md border border-neutral-200 bg-white p-3 text-sm font-medium">Issue
+                            <div class="rounded-md border border-hairline bg-canvas p-3">
+                                <p class="deck-label mb-3 text-neutral-400">Done</p>
+                                <div class="rounded-md border border-l-2 border-hairline border-l-border bg-white p-3 text-sm font-medium">Issue
                                     comments</div>
                             </div>
                         </div>
@@ -61,17 +60,15 @@
                 <section class="flex items-center justify-center p-5 sm:p-8 lg:p-10">
                     <div class="w-full max-w-md">
                         <a href="{{ url('/') }}" wire:navigate
-                            class="mb-10 flex w-fit items-center gap-3 font-semibold tracking-tight text-neutral-950 lg:hidden">
+                            class="mb-10 flex w-fit items-center gap-3 font-semibold tracking-tight text-ink lg:hidden">
                             <img src="{{ asset('scrumlab-icon.svg') }}" alt="" class="size-10 shrink-0">
-                            <span>{{ config('app.name') }}</span>
+                            <span class="font-display tracking-tight">{{ config('app.name') }}</span>
                         </a>
 
                         <div class="mb-8">
-                            <p class="text-sm font-medium text-neutral-500">Welcome back</p>
-                            <h2 class="mt-2 text-2xl font-bold tracking-normal text-neutral-950 sm:text-3xl">Log in to
+                            <p class="deck-label text-accent">Sign in</p>
+                            <h2 class="mt-3 font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">Log in to
                                 ScrumLab</h2>
-                            <p class="mt-3 text-sm leading-6 text-neutral-500">Use your workspace credentials to
-                                continue.</p>
                         </div>
 
                         @if ($errors->any())
@@ -90,13 +87,13 @@
                             @csrf
 
                             <div>
-                                <label for="email" class="block text-sm font-semibold text-neutral-800">Email
+                                <label for="email" class="block text-sm font-semibold text-ink">Email
                                     address</label>
                                 <input type="email" id="email" name="email" value="{{ old('email') }}" autocomplete="email" required
                                     @class([
-                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10',
+                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
                                         'border-rose-300' => $errors->has('email'),
-                                        'border-neutral-300' => ! $errors->has('email'),
+                                        'border-hairline' => ! $errors->has('email'),
                                     ])>
                                 @error('email')
                                     <p class="mt-2 text-sm text-rose-700">{{ $message }}</p>
@@ -105,17 +102,17 @@
 
                             <div>
                                 <label for="password"
-                                    class="block text-sm font-semibold text-neutral-800">Password</label>
+                                    class="block text-sm font-semibold text-ink">Password</label>
                                 <div class="relative mt-2">
                                     <input type="password" id="password" name="password"
                                         autocomplete="current-password" required
                                         @class([
-                                            'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10',
+                                            'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
                                             'border-rose-300' => $errors->has('password'),
-                                            'border-neutral-300' => ! $errors->has('password'),
+                                            'border-hairline' => ! $errors->has('password'),
                                         ])>
                                     <button type="button" data-password-toggle="password" aria-label="Show password"
-                                        class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-neutral-950">
+                                        class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-ink">
                                         <svg class="size-5" data-eye-icon xmlns="http://www.w3.org/2000/svg"
                                             fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"
                                             aria-hidden="true">
@@ -145,19 +142,19 @@
 
                             <div
                                 class="flex flex-col gap-3 text-sm min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
-                                <label class="flex items-center gap-2 text-neutral-600" for="remember_me">
+                                <label class="flex items-center gap-2 text-neutral-500" for="remember_me">
                                     <input id="remember_me" name="remember_me" type="checkbox"
-                                        class="size-4 rounded border-neutral-300 text-neutral-950 focus:ring-neutral-950">
+                                        class="size-4 rounded border-hairline text-accent focus:ring-accent">
                                     Remember me
                                 </label>
 
                                 <a href="{{ route('password.request') }}" wire:navigate
-                                    class="font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4 transition hover:decoration-neutral-950">Forgot
+                                    class="font-semibold text-accent transition hover:text-accent-strong">Forgot
                                     password?</a>
                             </div>
 
                             <button type="submit"
-                                class="flex w-full justify-center rounded-md border border-neutral-950 bg-neutral-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2">
+                                class="flex w-full justify-center rounded-md bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
                                 Sign in
                             </button>
                         </form>
@@ -165,7 +162,7 @@
                         <p class="mt-8 text-center text-sm text-neutral-500">
                             New to ScrumLab?
                             <a href="{{ route('register') }}" wire:navigate
-                                class="font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4 transition hover:decoration-neutral-950">Create
+                                class="font-semibold text-accent transition hover:text-accent-strong">Create
                                 an account</a>
                         </p>
                     </div>

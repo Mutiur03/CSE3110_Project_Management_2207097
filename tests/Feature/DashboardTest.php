@@ -7,7 +7,7 @@ use App\Models\Project;
 use App\Models\Sprint;
 use App\Models\Team;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\RefreshDatabase;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -29,7 +29,7 @@ class DashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Dashboard');
-        $response->assertSee('Create your first Scrum workspace');
+        $response->assertSee('Create your first workspace');
     }
 
     public function test_dashboard_prevents_browser_back_cache_after_logout(): void
@@ -79,14 +79,13 @@ class DashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Campus Portal');
-        $response->assertSee('Teams in this project');
+        $response->assertSee('Teams');
         $response->assertSee('Active sprint');
         $response->assertSee('Build project dashboard');
-        $response->assertSee('Create backlog item');
-        $response->assertSee('Epic');
-        $response->assertSee('Story');
-        $response->assertSee('Task');
-        $response->assertSee('Subtask');
-        $response->assertSee('Bug');
+        $response->assertSee('Epics');
+        $response->assertSee('Stories');
+        $response->assertSee('Tasks');
+        $response->assertSee('Subtasks');
+        $response->assertSee('Bugs');
     }
 }

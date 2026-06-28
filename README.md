@@ -196,13 +196,23 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ### Step 7 — Run tests
 
-Tests use the same Oracle connection as the app. Ensure `.env` has valid `DB_*` values, then:
+With **MySQL dev + SQLite tests**, PHPUnit never touched your dev data. Oracle tests use a **separate user** from `.env.testing`.
 
-```powershell
-php artisan test
-```
+1. Copy the testing env file:
 
-`RefreshDatabase` runs `migrate:fresh` before each test class, so Oracle must be running and the app user must be able to create/drop tables.
+   ```powershell
+   copy .env.testing.example .env.testing
+   ```
+
+   Set `APP_KEY` (same as `.env` is fine) and `ORACLE_DBA_PASSWORD` (local XE: your `system` user password).
+
+2. Run tests — the test user is created automatically if it does not exist:
+
+   ```powershell
+   php artisan test
+   ```
+
+Manual setup is only needed if you cannot use a DBA login; see `database/oracle/create_test_user.sql`.
 
 ---
 

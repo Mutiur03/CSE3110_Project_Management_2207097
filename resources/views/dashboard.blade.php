@@ -1,54 +1,54 @@
 @php
+    use App\Support\BadgeTones;
+
     $hasProject = filled($currentProject);
+    $canWriteDashboard = $hasProject && (bool) ($currentProject->can_write ?? false);
 
     $features = [
-        ['title' => 'Create project workspaces', 'description' => 'Start each Scrum workspace as a project with its own key, members, backlog, and sprint history.', 'tone' => 'bg-sky-50 text-sky-800 border-sky-200'],
-        ['title' => 'Organize multiple teams', 'description' => 'Add frontend, backend, QA, or custom teams under a project and track their workload separately.', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
-        ['title' => 'Plan sprints from backlog', 'description' => 'Move project issues into a sprint and follow them through Jira-style workflow columns.', 'tone' => 'bg-amber-50 text-amber-800 border-amber-200'],
-        ['title' => 'Review project activity', 'description' => 'Keep comments, status changes, assignments, and sprint updates visible for the current project.', 'tone' => 'bg-purple-50 text-purple-800 border-purple-200'],
+        ['title' => 'Create project workspaces', 'description' => 'Start each Scrum workspace as a project with its own key, members, backlog, and sprint history.'],
+        ['title' => 'Organize multiple teams', 'description' => 'Add frontend, backend, QA, or custom teams under a project and track their workload separately.'],
+        ['title' => 'Plan sprints from backlog', 'description' => 'Move project issues into a sprint and follow them through Jira-style workflow columns.'],
+        ['title' => 'Review project activity', 'description' => 'Keep comments, status changes, assignments, and sprint updates visible for the current project.'],
     ];
 
     $typeLabels = [
-        'epic' => ['label' => 'Epics', 'tone' => 'bg-purple-50 text-purple-700 border-purple-200'],
-        'story' => ['label' => 'Stories', 'tone' => 'bg-sky-50 text-sky-700 border-sky-200'],
-        'task' => ['label' => 'Tasks', 'tone' => 'bg-emerald-50 text-emerald-700 border-emerald-200'],
-        'subtask' => ['label' => 'Subtasks', 'tone' => 'bg-amber-50 text-amber-700 border-amber-200'],
-        'bug' => ['label' => 'Bugs', 'tone' => 'bg-rose-50 text-rose-700 border-rose-200'],
+        'epic' => 'Epics',
+        'story' => 'Stories',
+        'task' => 'Tasks',
+        'subtask' => 'Subtasks',
+        'bug' => 'Bugs',
     ];
 
-    $issueTypeTones = [
-        'epic' => 'bg-purple-100 text-purple-700',
-        'story' => 'bg-sky-100 text-sky-700',
-        'task' => 'bg-emerald-100 text-emerald-700',
-        'subtask' => 'bg-amber-100 text-amber-700',
-        'bug' => 'bg-rose-100 text-rose-700',
+    $statusLabels = [
+        'backlog' => 'Backlog',
+        'selected' => 'Selected',
+        'in_progress' => 'In progress',
+        'review' => 'Review',
+        'done' => 'Done',
     ];
-@endphp
-
-@php
-    $canWriteDashboard = $hasProject && (bool) ($currentProject->can_write ?? false);
 @endphp
 
 <x-dashboard.layout title="Dashboard" eyebrow="Project workspace" :current-project="$currentProject" :projects="$projects">
     @if (! $hasProject)
-        <div class="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
-            <div class="max-w-2xl">
-                <p class="text-sm font-semibold text-neutral-500">No project yet</p>
-                <h2 class="mt-2 text-2xl font-bold tracking-normal text-neutral-950">Create your first Scrum workspace</h2>
-                <p class="mt-3 text-sm leading-6 text-neutral-600">
-                    Each workspace is a project. After creating one, Scrum teams, backlog items, sprints, board columns,
-                    comments, and activity will load from that selected project.
-                </p>
-                <a href="{{ route('projects.create') }}" wire:navigate
-                    class="mt-5 inline-flex rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
-                    Create project
-                </a>
+        <div class="overflow-hidden rounded-lg border border-hairline bg-white">
+            <div class="border-l-2 border-l-accent p-6 sm:p-8">
+                <div class="max-w-2xl">
+                    <p class="deck-label text-accent">Get started</p>
+                    <h2 class="mt-2 font-display text-2xl font-bold tracking-tight text-ink">Create your first workspace</h2>
+                    <p class="mt-3 text-sm leading-6 text-muted-foreground">
+                        Every workspace is a project — its teams, backlog, sprints, board, and activity all live inside it.
+                    </p>
+                    <a href="{{ route('projects.create') }}" wire:navigate
+                        class="mt-5 inline-flex rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong">
+                        Create project
+                    </a>
+                </div>
             </div>
         </div>
 
         <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             @foreach ($features as $feature)
-                <x-dashboard.feature-card :title="$feature['title']" :description="$feature['description']" :tone="$feature['tone']" />
+                <x-dashboard.feature-card :title="$feature['title']" :description="$feature['description']" />
             @endforeach
         </div>
     @else
@@ -63,171 +63,147 @@
             </div>
         @endif
 
-        <div class="mb-6 grid gap-4 xl:grid-cols-[1fr_22rem]">
-            <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="rounded-md bg-neutral-950 px-2.5 py-1 text-xs font-bold text-white">{{ $currentProject->key }}</span>
-                            <span class="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">{{ ucfirst($currentProject->status) }}</span>
-                        </div>
-                        <h2 class="mt-3 text-2xl font-bold tracking-normal text-neutral-950">{{ $currentProject->name }}</h2>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">{{ $currentProject->description ?: 'No project description added yet.' }}</p>
-                    </div>
-
-                    <div class="flex flex-col gap-2 sm:flex-row">
-                        @if ($projects->count() > 1)
-                            <form method="GET" action="{{ route('dashboard') }}">
-                                <label class="sr-only" for="project-switcher">Switch project</label>
-                                <select id="project-switcher" name="project" onchange="this.form.submit()"
-                                    class="w-full rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm font-semibold text-neutral-950 outline-none transition focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10">
-                                    @foreach ($projects as $project)
-                                        <option value="{{ $project->id }}" @selected($currentProject && $project->id === $currentProject->id)>
-                                            {{ $project->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </form>
-                        @endif
-                        @if ($canWriteDashboard)
-                        <a href="{{ route('projects.issues.create', $currentProject->id) }}" wire:navigate
-                            class="inline-flex justify-center rounded-md bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800">
-                            Create issue
-                        </a>
-                        @endif
-                    </div>
-                </div>
-            </section>
-
-            <aside class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-                <p class="text-sm font-semibold text-neutral-500">Project rule</p>
-                <p class="mt-2 text-sm leading-6 text-neutral-700">
-                    Changing the selected project changes the teams, backlog, sprint board, issues, members, and activity shown here.
-                </p>
-            </aside>
-        </div>
-
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ($stats as $stat)
-                <x-dashboard.stat-card :label="$stat['label']" :value="$stat['value']" :note="$stat['note']" :tone="$stat['tone']" />
+                <x-dashboard.stat-card :label="$stat['label']" :value="$stat['value']" :note="$stat['note']" />
             @endforeach
         </div>
 
-        <div class="mt-6 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-            <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-                <div class="mb-5 flex items-center justify-between gap-3">
-                    <div>
-                        <h2 class="text-lg font-bold">Teams in this project</h2>
-                        <p class="text-sm text-neutral-500">Each team belongs to {{ $currentProject->name }}</p>
+        <x-dashboard.issue-type-summary class="mt-4" :type-labels="$typeLabels" :backlog-counts="$backlogCounts"
+            :project-id="$currentProject->id" />
+
+        <div class="mt-6 grid gap-6 lg:grid-cols-3">
+            <section class="rounded-lg border border-hairline bg-white p-5 lg:col-span-2">
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h2 class="deck-label text-muted-foreground">Active sprint</h2>
+                        <p class="mt-1 truncate text-sm font-semibold text-ink">
+                            {{ $activeSprint?->name ?? 'No active sprint' }}
+                        </p>
                     </div>
-                    <a href="{{ route('projects.teams.index', $currentProject->id) }}" wire:navigate
-                        class="text-sm font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4">
-                        Add team
-                    </a>
+                    <div class="flex flex-wrap items-center gap-2">
+                        @if ($activeSprint)
+                            <span class="font-display text-xl font-bold tabular-nums text-ink">{{ $sprintProgress }}%</span>
+                            <span class="text-muted-foreground">·</span>
+                        @endif
+                        <a href="{{ route('projects.board.index', $currentProject->id) }}" wire:navigate
+                            class="text-sm font-semibold text-accent transition hover:text-accent-strong">Board</a>
+                        <a href="{{ route('projects.sprints.index', $currentProject->id) }}" wire:navigate
+                            class="text-sm font-semibold text-accent transition hover:text-accent-strong">Sprints</a>
+                    </div>
                 </div>
 
-                @if ($teams->isEmpty())
-                    <div class="rounded-lg border border-dashed border-neutral-300 bg-stone-50 p-5 text-sm text-neutral-600">
-                        No teams have been added to this project yet.
+                @if ($activeSprint)
+                    <div class="mb-5 h-1.5 overflow-hidden rounded-full bg-canvas">
+                        <div class="h-full rounded-full bg-accent transition-all" style="width: {{ max(2, (int) $sprintProgress) }}%"></div>
                     </div>
-                @else
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        @foreach ($teams as $team)
-                            <article class="rounded-lg border border-neutral-200 bg-stone-50 p-4">
-                                <div class="flex items-center justify-between gap-3">
-                                    <h3 class="text-sm font-bold text-neutral-950">{{ $team->name }}</h3>
-                                    <span class="rounded bg-sky-100 px-2 py-1 text-[10px] font-bold text-sky-700">
-                                        {{ $team->members_count }} members
-                                    </span>
-                                </div>
-                                <p class="mt-3 text-sm leading-6 text-neutral-600">{{ $team->description ?: 'No team description added.' }}</p>
-                                <p class="mt-3 text-xs font-semibold text-neutral-500">{{ $team->issues_count }} assigned issues</p>
-                            </article>
+
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                        @foreach ($boardColumns as $column)
+                            <div class="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-center">
+                                <p class="deck-label text-muted-foreground">{{ $column['stage'] }}</p>
+                                <p class="mt-1 font-display text-lg font-bold tabular-nums text-ink">{{ $column['issues']->count() }}</p>
+                            </div>
                         @endforeach
+                    </div>
+
+                    @php
+                        $sprintIssues = $boardColumns->flatMap(fn ($column) => $column['issues'])->take(5);
+                    @endphp
+
+                    @if ($sprintIssues->isNotEmpty())
+                        <div class="mt-5 border-t border-hairline pt-4">
+                            <p class="deck-label mb-3 text-muted-foreground">In this sprint</p>
+                            <ul class="divide-y divide-hairline">
+                                @foreach ($sprintIssues as $issue)
+                                    <li class="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                                        <div class="min-w-0">
+                                            <a href="{{ route('projects.issues.show', [$currentProject->id, $issue->id]) }}" wire:navigate
+                                                class="truncate text-sm font-semibold text-ink transition hover:text-accent">
+                                                {{ $issue->title }}
+                                            </a>
+                                            <p class="mt-0.5 font-mono text-[11px] text-muted-foreground">{{ $issue->key }}</p>
+                                        </div>
+                                        <x-ui.badge class="shrink-0" :tone="BadgeTones::issueStatus()[$issue->status] ?? BadgeTones::NEUTRAL">
+                                            {{ $statusLabels[$issue->status] ?? $issue->status }}
+                                        </x-ui.badge>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                @else
+                    <div class="rounded-md border border-dashed border-hairline px-5 py-8 text-center">
+                        <p class="text-sm text-muted-foreground">No sprint is active yet.</p>
+                        <a href="{{ route('projects.sprints.index', $currentProject->id) }}" wire:navigate
+                            class="mt-2 inline-block text-sm font-semibold text-accent transition hover:text-accent-strong">
+                            Plan a sprint &rarr;
+                        </a>
                     </div>
                 @endif
             </section>
 
-            <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-                <div class="mb-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-lg font-bold">Active sprint</h2>
-                        <p class="text-sm text-neutral-500">
-                            @if ($activeSprint)
-                                {{ $activeSprint->name }} issues by workflow stage
-                            @else
-                                No active sprint for {{ $currentProject->key }}
-                            @endif
-                        </p>
-                    </div>
-                    <span class="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">{{ $sprintProgress }}%</span>
+            <section class="rounded-lg border border-hairline bg-white p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <h2 class="deck-label text-muted-foreground">Recent activity</h2>
+                    <a href="{{ route('projects.activity.index', $currentProject->id) }}" wire:navigate
+                        class="text-sm font-semibold text-accent transition hover:text-accent-strong">
+                        View all
+                    </a>
                 </div>
 
-                <div class="grid gap-3 lg:grid-cols-5">
-                    @foreach ($boardColumns as $column)
-                        <div class="rounded-md border border-neutral-200 bg-stone-50 p-3">
-                            <p class="mb-3 text-xs font-bold text-neutral-500">{{ $column['stage'] }}</p>
-                            <div class="space-y-3">
-                                @forelse ($column['issues'] as $issue)
-                                    <article class="rounded-md border border-neutral-200 bg-white p-3">
-                                        <div class="flex items-center justify-between gap-2">
-                                            <span class="rounded px-2 py-1 text-[10px] font-bold {{ $issueTypeTones[$issue->type] ?? 'bg-neutral-100 text-neutral-700' }}">
-                                                {{ strtoupper($issue->type) }}
-                                            </span>
-                                            <span class="text-[10px] font-bold text-neutral-400">{{ $issue->key }}</span>
-                                        </div>
-                                        <p class="mt-3 text-sm font-semibold leading-5">{{ $issue->title }}</p>
-                                        @if ($issue->team_name)
-                                            <p class="mt-2 text-xs text-neutral-500">{{ $issue->team_name }}</p>
-                                        @endif
-                                    </article>
-                                @empty
-                                    <p class="rounded-md border border-dashed border-neutral-300 bg-white p-3 text-xs text-neutral-500">
-                                        No issues
-                                    </p>
-                                @endforelse
+                <div class="space-y-3.5">
+                    @forelse ($activities as $activity)
+                        <div class="flex gap-3">
+                            <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent"></span>
+                            <div class="min-w-0">
+                                <p class="text-sm leading-5 text-ink">
+                                    <span class="font-semibold">{{ $activity->user_name ?? 'System' }}</span> {{ $activity->action }}
+                                    @if ($activity->issue_key)
+                                        <span class="font-mono text-xs text-muted-foreground">{{ $activity->issue_key }}</span>
+                                    @endif
+                                </p>
+                                <p class="mt-0.5 font-mono text-[11px] text-muted-foreground">{{ $activity->created_at_human }}</p>
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <div class="rounded-md border border-dashed border-hairline px-4 py-8 text-center">
+                            <p class="text-sm text-muted-foreground">Activity will show up here as the team works.</p>
+                        </div>
+                    @endforelse
                 </div>
             </section>
         </div>
 
-        <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_0.75fr]">
-            <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-                <h2 class="text-lg font-bold">Project backlog focus</h2>
-                <div class="mt-5 grid gap-3 md:grid-cols-4">
-                    @foreach ($typeLabels as $type => $meta)
-                        <div class="rounded-lg border p-4 {{ $meta['tone'] }}">
-                            <p class="text-sm font-semibold">{{ $meta['label'] }}</p>
-                            <p class="mt-2 text-2xl font-bold">{{ $backlogCounts->get($type, 0) }}</p>
-                        </div>
-                    @endforeach
+        <div class="mt-6">
+            <section class="rounded-lg border border-hairline bg-white p-5">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <h2 class="deck-label text-muted-foreground">Teams</h2>
+                    <a href="{{ route('projects.teams.index', $currentProject->id) }}" wire:navigate
+                        class="text-sm font-semibold text-accent transition hover:text-accent-strong">
+                        Manage
+                    </a>
                 </div>
-            </section>
 
-            <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-                <h2 class="text-lg font-bold">Project activity</h2>
-                <div class="mt-5 space-y-4">
-                    @forelse ($activities as $activity)
-                        <div class="flex gap-3">
-                            <span class="mt-1 size-2 rounded-full bg-neutral-950"></span>
-                            <div>
-                                <p class="text-sm font-medium text-neutral-950">
-                                    {{ $activity->user_name ?? 'System' }} {{ $activity->action }}
-                                    @if ($activity->issue_key)
-                                        {{ $activity->issue_key }}
-                                    @endif
-                                </p>
-                                <p class="text-xs text-neutral-500">{{ $activity->created_at_human }}</p>
-                            </div>
-                        </div>
-                    @empty
-                        <p class="rounded-lg border border-dashed border-neutral-300 bg-stone-50 p-5 text-sm text-neutral-600">
-                            No activity has been recorded for this project yet.
-                        </p>
-                    @endforelse
-                </div>
+                @if ($teams->isEmpty())
+                    <div class="rounded-md border border-dashed border-hairline px-5 py-8 text-center">
+                        <p class="text-sm text-muted-foreground">No teams yet.</p>
+                        <a href="{{ route('projects.teams.index', $currentProject->id) }}" wire:navigate
+                            class="mt-2 inline-block text-sm font-semibold text-accent transition hover:text-accent-strong">
+                            Add your first team &rarr;
+                        </a>
+                    </div>
+                @else
+                    <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach ($teams as $team)
+                            <li class="rounded-md border border-hairline bg-canvas p-4">
+                                <h3 class="truncate text-sm font-semibold text-ink">{{ $team->name }}</h3>
+                                <p class="mt-1 line-clamp-2 text-sm text-muted-foreground">{{ $team->description ?: 'No description.' }}</p>
+                                <p class="mt-3 font-mono text-xs text-muted-foreground">{{ $team->members_count }} members · {{ $team->issues_count }} issues</p>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
             </section>
         </div>
     @endif

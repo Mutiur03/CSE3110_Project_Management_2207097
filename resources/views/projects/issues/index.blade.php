@@ -1,18 +1,8 @@
 @php
-    $typeTones = [
-        'epic' => 'text-purple-600',
-        'story' => 'text-sky-600',
-        'task' => 'text-emerald-600',
-        'subtask' => 'text-blue-600',
-        'bug' => 'text-rose-600',
-    ];
+    use App\Support\BadgeTones;
 
-    $priorityTones = [
-        'low' => 'text-neutral-500',
-        'medium' => 'text-amber-600',
-        'high' => 'text-orange-600',
-        'urgent' => 'text-rose-600',
-    ];
+    $typeTones = BadgeTones::issueTypeIcon();
+    $priorityTones = BadgeTones::issuePriority();
 
     $statusLabels = [
         'backlog' => 'Backlog',
@@ -21,6 +11,16 @@
         'review' => 'Review',
         'done' => 'Done',
     ];
+
+    $issueTypeSpine = [
+        'epic' => 'border-l-border',
+        'story' => 'border-l-border',
+        'task' => 'border-l-border',
+        'subtask' => 'border-l-border',
+        'bug' => 'border-l-border',
+    ];
+
+    $statusTones = BadgeTones::issueStatus();
 
     $rootIssues = $issues->whereNull('parent_issue_id');
     $childrenByParent = $issues->whereNotNull('parent_issue_id')->groupBy('parent_issue_id');
@@ -33,58 +33,55 @@
 @endphp
 
 <x-dashboard.layout title="Issues" :eyebrow="$currentProject->name" :current-project="$currentProject" :projects="$projects">
-    <section class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <section class="rounded-lg border border-hairline bg-white p-5">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="rounded-md bg-neutral-950 px-2.5 py-1 text-xs font-bold text-white">{{ $currentProject->key }}</span>
-                    <span class="rounded-md bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-700">{{ $issues->count() }} issues</span>
+                    <x-ui.key-badge :label="$currentProject->key" />
+                    <span class="font-mono text-xs text-neutral-400">{{ $issues->count() }} issues</span>
                 </div>
-                <h2 class="mt-3 text-2xl font-bold tracking-normal text-neutral-950">Project backlog</h2>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-                    Backlog is the project issue list. Team and assignee are optional, so work can start before teams are formed.
-                </p>
+                <h2 class="mt-3 font-display text-2xl font-bold tracking-tight text-ink">Project backlog</h2>
             </div>
         </div>
     </section>
 
-    <section class="mt-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <section class="mt-6 rounded-lg border border-hairline bg-white p-5">
         <form method="GET" action="{{ route('projects.issues.index', $currentProject->id) }}" class="grid gap-3 lg:grid-cols-[1.6fr_repeat(5,1fr)_auto]">
             <label>
                 <span class="sr-only">Search issues</span>
                 <input name="q" type="search" value="{{ $filters['q'] ?? '' }}" placeholder="Search key or title"
-                    class="w-full rounded-md border border-neutral-200 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                    class="w-full rounded-md border border-hairline bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
             </label>
 
-            <select name="type" class="rounded-md border border-neutral-200 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+            <select name="type" class="rounded-md border border-hairline bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                 <option value="">All types</option>
                 @foreach (['epic' => 'Epic', 'story' => 'Story', 'task' => 'Task', 'subtask' => 'Subtask', 'bug' => 'Bug'] as $value => $label)
                     <option value="{{ $value }}" @selected(($filters['type'] ?? '') === $value)>{{ $label }}</option>
                 @endforeach
             </select>
 
-            <select name="status" class="rounded-md border border-neutral-200 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+            <select name="status" class="rounded-md border border-hairline bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                 <option value="">All status</option>
                 @foreach ($statusLabels as $value => $label)
                     <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>
                 @endforeach
             </select>
 
-            <select name="priority" class="rounded-md border border-neutral-200 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+            <select name="priority" class="rounded-md border border-hairline bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                 <option value="">All priority</option>
                 @foreach (['low' => 'Low', 'medium' => 'Medium', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label)
                     <option value="{{ $value }}" @selected(($filters['priority'] ?? '') === $value)>{{ $label }}</option>
                 @endforeach
             </select>
 
-            <select name="assignee_id" class="rounded-md border border-neutral-200 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+            <select name="assignee_id" class="rounded-md border border-hairline bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                 <option value="">All assignees</option>
                 @foreach ($members as $member)
                     <option value="{{ $member->id }}" @selected(($filters['assignee_id'] ?? '') === $member->id)>{{ $member->name }}</option>
                 @endforeach
             </select>
 
-            <select name="sprint_id" class="rounded-md border border-neutral-200 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+            <select name="sprint_id" class="rounded-md border border-hairline bg-white px-3 py-2.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                 <option value="">All sprints</option>
                 @foreach ($sprints as $sprint)
                     <option value="{{ $sprint->id }}" @selected(($filters['sprint_id'] ?? '') === $sprint->id)>{{ $sprint->name }}</option>
@@ -92,9 +89,9 @@
             </select>
 
             <div class="flex gap-2">
-                <button type="submit" class="rounded-md bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800">Filter</button>
+                <button type="submit" class="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong">Filter</button>
                 <a href="{{ route('projects.issues.index', $currentProject->id) }}" wire:navigate
-                    class="rounded-md border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">Clear</a>
+                    class="rounded-md border border-hairline bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink">Clear</a>
             </div>
         </form>
     </section>
@@ -118,23 +115,23 @@
     </x-dashboard.modal>
     @endif
 
-    <section class="mt-6 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
+    <section class="mt-6 overflow-hidden rounded-lg border border-hairline bg-white">
         @if ($issues->isEmpty())
-            <div class="rounded-lg border border-dashed border-neutral-300 bg-stone-50 p-6 text-sm text-neutral-600">
-                No issues have been created for this project yet.
+            <div class="rounded-lg border border-dashed border-hairline bg-canvas p-6 text-sm text-neutral-500">
+                No issues yet.
             </div>
         @else
             <div class="overflow-x-auto">
                 <div class="min-w-[860px]">
-                    <div class="grid grid-cols-[minmax(24rem,1fr)_13rem_13rem_9rem_8rem] border-b border-neutral-200 bg-stone-50 text-xs font-bold text-neutral-500">
-                        <span class="border-r border-neutral-200 px-3 py-3">Work</span>
-                        <span class="border-r border-neutral-200 px-3 py-3">Assignee</span>
-                        <span class="border-r border-neutral-200 px-3 py-3">Reporter</span>
-                        <span class="border-r border-neutral-200 px-3 py-3">Priority</span>
-                        <span class="px-3 py-3">Status</span>
+                    <div class="grid grid-cols-[minmax(24rem,1fr)_13rem_13rem_9rem_8rem] border-b border-hairline bg-canvas">
+                        <span class="deck-label border-r border-hairline px-3 py-3 text-neutral-400">Work</span>
+                        <span class="deck-label border-r border-hairline px-3 py-3 text-neutral-400">Assignee</span>
+                        <span class="deck-label border-r border-hairline px-3 py-3 text-neutral-400">Reporter</span>
+                        <span class="deck-label border-r border-hairline px-3 py-3 text-neutral-400">Priority</span>
+                        <span class="deck-label px-3 py-3 text-neutral-400">Status</span>
                     </div>
 
-                    <div class="divide-y divide-neutral-100">
+                    <div class="divide-y divide-hairline">
                         @foreach ($epics as $epic)
                             <div>
                                 @include('projects.issues.partials.backlog-row', [
@@ -143,6 +140,8 @@
                                     'typeTones' => $typeTones,
                                     'priorityTones' => $priorityTones,
                                     'statusLabels' => $statusLabels,
+                                    'issueTypeSpine' => $issueTypeSpine,
+                                    'statusTones' => $statusTones,
                                     'indent' => 0,
                                     'hasChildren' => $childrenByParent->get($epic->id, collect())->where('type', 'story')->isNotEmpty(),
                                 ])
@@ -154,6 +153,8 @@
                                         'typeTones' => $typeTones,
                                         'priorityTones' => $priorityTones,
                                         'statusLabels' => $statusLabels,
+                                    'issueTypeSpine' => $issueTypeSpine,
+                                    'statusTones' => $statusTones,
                                         'indent' => 1,
                                         'hasChildren' => $childrenByParent->get($story->id, collect())->where('type', 'subtask')->isNotEmpty(),
                                     ])
@@ -165,6 +166,8 @@
                                             'typeTones' => $typeTones,
                                             'priorityTones' => $priorityTones,
                                             'statusLabels' => $statusLabels,
+                                    'issueTypeSpine' => $issueTypeSpine,
+                                    'statusTones' => $statusTones,
                                             'indent' => 2,
                                             'hasChildren' => false,
                                         ])
@@ -181,6 +184,8 @@
                                     'typeTones' => $typeTones,
                                     'priorityTones' => $priorityTones,
                                     'statusLabels' => $statusLabels,
+                                    'issueTypeSpine' => $issueTypeSpine,
+                                    'statusTones' => $statusTones,
                                     'indent' => 0,
                                     'hasChildren' => $childrenByParent->get($story->id, collect())->where('type', 'subtask')->isNotEmpty(),
                                 ])
@@ -192,6 +197,8 @@
                                         'typeTones' => $typeTones,
                                         'priorityTones' => $priorityTones,
                                         'statusLabels' => $statusLabels,
+                                    'issueTypeSpine' => $issueTypeSpine,
+                                    'statusTones' => $statusTones,
                                         'indent' => 1,
                                         'hasChildren' => false,
                                     ])
@@ -207,6 +214,8 @@
                                     'typeTones' => $typeTones,
                                     'priorityTones' => $priorityTones,
                                     'statusLabels' => $statusLabels,
+                                    'issueTypeSpine' => $issueTypeSpine,
+                                    'statusTones' => $statusTones,
                                     'indent' => 0,
                                     'hasChildren' => $childrenByParent->get($task->id, collect())->where('type', 'subtask')->isNotEmpty(),
                                 ])
@@ -218,6 +227,8 @@
                                         'typeTones' => $typeTones,
                                         'priorityTones' => $priorityTones,
                                         'statusLabels' => $statusLabels,
+                                    'issueTypeSpine' => $issueTypeSpine,
+                                    'statusTones' => $statusTones,
                                         'indent' => 1,
                                         'hasChildren' => false,
                                     ])
@@ -232,6 +243,8 @@
                                 'typeTones' => $typeTones,
                                 'priorityTones' => $priorityTones,
                                 'statusLabels' => $statusLabels,
+                                'issueTypeSpine' => $issueTypeSpine,
+                                'statusTones' => $statusTones,
                                 'indent' => 0,
                                 'hasChildren' => false,
                             ])
@@ -244,6 +257,8 @@
                                 'typeTones' => $typeTones,
                                 'priorityTones' => $priorityTones,
                                 'statusLabels' => $statusLabels,
+                                'issueTypeSpine' => $issueTypeSpine,
+                                'statusTones' => $statusTones,
                                 'indent' => 0,
                                 'hasChildren' => false,
                             ])

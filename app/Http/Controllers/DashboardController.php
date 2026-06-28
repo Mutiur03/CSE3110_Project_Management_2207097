@@ -97,28 +97,24 @@ class DashboardController extends Controller
 
         $stats = [
             [
-                'label' => 'Project teams',
+                'label' => 'Teams',
                 'value' => (string) $currentProject->teams_count,
-                'note' => $teams->pluck('name')->take(3)->join(', ') ?: 'No teams yet',
-                'tone' => 'bg-sky-50 text-sky-700 border-sky-200',
+                'note' => $teams->pluck('name')->take(2)->join(', ') ?: 'No teams yet',
             ],
             [
                 'label' => 'Open issues',
                 'value' => (string) $openIssues,
-                'note' => 'Across this project only',
-                'tone' => 'bg-purple-50 text-purple-700 border-purple-200',
+                'note' => 'Not done or in review',
             ],
             [
                 'label' => 'Sprint progress',
                 'value' => $sprintProgress . '%',
                 'note' => $activeSprint ? $activeSprint->name : 'No active sprint',
-                'tone' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
             ],
             [
-                'label' => 'Pending review',
+                'label' => 'In review',
                 'value' => (string) $reviewIssues,
-                'note' => 'Waiting for team review',
-                'tone' => 'bg-amber-50 text-amber-700 border-amber-200',
+                'note' => 'Awaiting team review',
             ],
         ];
 

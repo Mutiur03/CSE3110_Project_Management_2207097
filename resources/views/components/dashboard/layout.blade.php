@@ -49,16 +49,16 @@
         {{ $title }}
     </x-slot:title>
 
-    <main class="min-h-screen bg-stone-50 font-sans text-neutral-950">
+    <main class="min-h-screen bg-canvas font-sans text-ink">
         <div class="flex min-h-screen">
             <x-dashboard.sidebar :current-project="$currentProject" :projects="$projects" />
 
             <div class="min-w-0 flex-1">
-                <header class="sticky top-0 z-30 border-b border-neutral-200 bg-white/90 backdrop-blur">
-                    <div class="grid items-center gap-4 px-4 py-3 sm:px-6 lg:grid-cols-[1fr_minmax(24rem,42rem)_1fr] lg:px-8">
-                        <div class="flex min-w-0 items-center gap-4">
+                <header class="sticky top-0 z-30 border-b border-hairline bg-canvas/85 backdrop-blur">
+                    <div class="grid items-center gap-4 px-4 py-3 sm:px-6 lg:grid-cols-[1fr_minmax(20rem,38rem)_1fr] lg:px-8">
+                        <div class="flex min-w-0 items-center gap-3">
                             <button type="button" id="sidebar-toggle"
-                                class="rounded-md border border-neutral-200 bg-white p-2 text-neutral-700 lg:hidden">
+                                class="rounded-md border border-hairline bg-white p-2 text-neutral-700 lg:hidden">
                                 <span class="sr-only">Open sidebar</span>
                                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.8" stroke="currentColor">
@@ -67,8 +67,10 @@
                             </button>
 
                             <div class="min-w-0">
-                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">{{ $eyebrow }}</p>
-                                <h1 class="truncate text-lg font-bold text-neutral-950 sm:text-xl">{{ $title }}</h1>
+                                @if ($currentProject)
+                                    <p class="deck-label text-neutral-400">{{ $currentProject->key }}</p>
+                                @endif
+                                <h1 class="truncate font-display text-lg font-bold tracking-tight text-ink sm:text-xl">{{ $title }}</h1>
                             </div>
                         </div>
 
@@ -82,22 +84,22 @@
                                         d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
                                 </svg>
                                 <input type="search" placeholder="Search projects, teams, issues"
-                                    class="w-full rounded-md border border-neutral-200 bg-stone-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-neutral-950 focus:bg-white focus:ring-2 focus:ring-neutral-950/10">
+                                    class="w-full rounded-md border border-hairline bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
                             </label>
                             @if ($currentProject && $canWriteProject)
                                 <button type="button" data-modal-target="global-create-issue-modal"
-                                    class="inline-flex shrink-0 items-center gap-2 rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                    class="inline-flex shrink-0 items-center gap-2 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong">
                                     <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke-width="2" stroke="currentColor">
+                                        stroke-width="2.2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
                                     </svg>
                                     Create
                                 </button>
                             @else
                                 <a href="{{ route('projects.create') }}" wire:navigate
-                                    class="inline-flex shrink-0 items-center gap-2 rounded-md bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800">
+                                    class="inline-flex shrink-0 items-center gap-2 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong">
                                     <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke-width="2" stroke="currentColor">
+                                        stroke-width="2.2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
                                     </svg>
                                     Create

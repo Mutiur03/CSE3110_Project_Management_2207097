@@ -135,6 +135,31 @@ return [
             ],
         ],
 
+        /*
+        | Optional DBA login (ORACLE_DBA_* in .env.testing). PHPUnit uses this once to
+        | auto-create the test schema if DB_USERNAME does not exist yet.
+        */
+        'oracle_dba' => [
+            'driver' => 'oracle',
+            'tns' => env('DB_TNS', ''),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '1521'),
+            'database' => env('DB_DATABASE', ''),
+            'service_name' => env('DB_SERVICE_NAME', ''),
+            'username' => env('ORACLE_DBA_USERNAME', ''),
+            'password' => env('ORACLE_DBA_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'AL32UTF8'),
+            'prefix' => '',
+            'server_version' => env('DB_SERVER_VERSION', '21c'),
+            'sessionVars' => [
+                'NLS_TIME_FORMAT' => 'HH24:MI:SS',
+                'NLS_DATE_FORMAT' => 'YYYY-MM-DD HH24:MI:SS',
+                'NLS_TIMESTAMP_FORMAT' => 'YYYY-MM-DD HH24:MI:SS',
+                'NLS_TIMESTAMP_TZ_FORMAT' => 'YYYY-MM-DD HH24:MI:SS TZH:TZM',
+                'NLS_NUMERIC_CHARACTERS' => '.,',
+            ],
+        ],
+
     ],
 
     /*

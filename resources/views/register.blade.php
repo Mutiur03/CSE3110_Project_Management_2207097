@@ -3,24 +3,22 @@
         Register
     </x-slot:title>
 
-    <main class="min-h-screen bg-stone-50 px-4 py-4 font-sans text-neutral-950 sm:px-6 sm:py-6 lg:px-8">
+    <main class="min-h-screen bg-canvas px-4 py-4 font-sans text-ink sm:px-6 sm:py-6 lg:px-8">
         <div class="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-6xl items-center sm:min-h-[calc(100vh-3rem)]">
             <div
-                class="grid w-full overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm lg:min-h-190 lg:grid-cols-[1fr_0.95fr]">
+                class="grid w-full overflow-hidden rounded-lg border border-hairline bg-white lg:min-h-190 lg:grid-cols-[1fr_0.95fr]">
                 <section class="flex items-center justify-center p-5 sm:p-8 lg:order-1 lg:p-10">
                     <div class="w-full max-w-md">
                         <a href="{{ url('/') }}" wire:navigate
-                            class="mb-10 flex w-fit items-center gap-3 font-semibold tracking-tight text-neutral-950 lg:hidden">
+                            class="mb-10 flex w-fit items-center gap-3 font-semibold tracking-tight text-ink lg:hidden">
                             <img src="{{ asset('scrumlab-icon.svg') }}" alt="" class="size-10 shrink-0">
-                            <span>{{ config('app.name') }}</span>
+                            <span class="font-display tracking-tight">{{ config('app.name') }}</span>
                         </a>
 
                         <div class="mb-8">
-                            <p class="text-sm font-medium text-neutral-500">Create workspace access</p>
-                            <h1 class="mt-2 text-2xl font-bold tracking-normal text-neutral-950 sm:text-3xl">Create your
+                            <p class="deck-label text-accent">Get started</p>
+                            <h1 class="mt-3 font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">Create your
                                 ScrumLab account</h1>
-                            <p class="mt-3 text-sm leading-6 text-neutral-500">Set up your profile and start organizing
-                                project work.</p>
                         </div>
 
                         @if ($errors->any())
@@ -34,13 +32,13 @@
                             @csrf
 
                             <div>
-                                <label for="name" class="block text-sm font-semibold text-neutral-800">Full
+                                <label for="name" class="block text-sm font-semibold text-ink">Full
                                     name</label>
                                 <input type="text" id="name" name="name" value="{{ old('name') }}"
                                     autocomplete="name" required @class([
-                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10',
+                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
                                         'border-rose-300' => $errors->has('name'),
-                                        'border-neutral-300' => !$errors->has('name'),
+                                        'border-hairline' => !$errors->has('name'),
                                     ])>
                                 @error('name')
                                     <p class="mt-2 text-sm text-rose-700">{{ $message }}</p>
@@ -48,13 +46,13 @@
                             </div>
 
                             <div>
-                                <label for="email" class="block text-sm font-semibold text-neutral-800">Email
+                                <label for="email" class="block text-sm font-semibold text-ink">Email
                                     address</label>
                                 <input type="email" id="email" name="email" value="{{ old('email') }}"
                                     autocomplete="email" required @class([
-                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10',
+                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
                                         'border-rose-300' => $errors->has('email'),
-                                        'border-neutral-300' => !$errors->has('email'),
+                                        'border-hairline' => !$errors->has('email'),
                                     ])>
                                 @error('email')
                                     <p class="mt-2 text-sm text-rose-700">{{ $message }}</p>
@@ -64,17 +62,17 @@
                             <div class="grid gap-5 sm:grid-cols-2">
                                 <div>
                                     <label for="password"
-                                        class="block text-sm font-semibold text-neutral-800">Password</label>
+                                        class="block text-sm font-semibold text-ink">Password</label>
                                     <div class="relative mt-2">
                                         <input type="password" id="password" name="password"
                                             autocomplete="new-password" required @class([
-                                                'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10',
+                                                'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
                                                 'border-rose-300' => $errors->has('password'),
-                                                'border-neutral-300' => !$errors->has('password'),
+                                                'border-hairline' => !$errors->has('password'),
                                             ])>
                                         <button type="button" data-password-toggle="password"
                                             aria-label="Show password"
-                                            class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-neutral-950">
+                                            class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-ink">
                                             <svg class="size-5" data-eye-icon xmlns="http://www.w3.org/2000/svg"
                                                 fill="none" viewBox="0 0 24 24" stroke-width="1.8"
                                                 stroke="currentColor" aria-hidden="true">
@@ -104,17 +102,17 @@
 
                                 <div>
                                     <label for="password_confirmation"
-                                        class="block text-sm font-semibold text-neutral-800">Confirm</label>
+                                        class="block text-sm font-semibold text-ink">Confirm</label>
                                     <div class="relative mt-2">
                                         <input type="password" id="password_confirmation" name="password_confirmation"
                                             autocomplete="new-password" required @class([
-                                                'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-neutral-950 shadow-xs outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-2 focus:ring-neutral-950/10',
+                                                'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
                                                 'border-rose-300' => $errors->has('password'),
-                                                'border-neutral-300' => !$errors->has('password'),
+                                                'border-hairline' => !$errors->has('password'),
                                             ])>
                                         <button type="button" data-password-toggle="password_confirmation"
                                             aria-label="Show confirm password"
-                                            class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-neutral-950">
+                                            class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-ink">
                                             <svg class="size-5" data-eye-icon xmlns="http://www.w3.org/2000/svg"
                                                 fill="none" viewBox="0 0 24 24" stroke-width="1.8"
                                                 stroke="currentColor" aria-hidden="true">
@@ -143,10 +141,10 @@
                                 Passwords do not match.
                             </p>
 
-                            <label class="flex items-start gap-3 text-sm leading-6 text-neutral-600" for="terms">
+                            <label class="flex items-start gap-3 text-sm leading-6 text-neutral-500" for="terms">
                                 <input id="terms" name="terms" type="checkbox" required
                                     {{ old('terms') ? 'checked' : '' }}
-                                    class="mt-1 size-4 rounded border-neutral-300 text-neutral-950 focus:ring-neutral-950">
+                                    class="mt-1 size-4 rounded border-hairline text-accent focus:ring-accent">
                                 <span>I agree to create a ScrumLab workspace profile for project planning and
                                     collaboration.</span>
                             </label>
@@ -155,7 +153,7 @@
                             @enderror
 
                             <button type="submit"
-                                class="flex w-full justify-center rounded-md border border-neutral-950 bg-neutral-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2">
+                                class="flex w-full justify-center rounded-md bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
                                 Create account
                             </button>
                         </form>
@@ -163,47 +161,39 @@
                         <p class="mt-8 text-center text-sm text-neutral-500">
                             Already have an account?
                             <a href="{{ route('login') }}" wire:navigate
-                                class="font-semibold text-neutral-950 underline decoration-neutral-300 underline-offset-4 transition hover:decoration-neutral-950">Log
+                                class="font-semibold text-accent transition hover:text-accent-strong">Log
                                 in</a>
                         </p>
                     </div>
                 </section>
 
                 <section
-                    class="order-first hidden flex-col gap-8 border-b border-neutral-200 bg-stone-100 p-5 sm:p-8 lg:order-0 lg:flex lg:border-b-0 lg:border-r lg:p-10">
+                    class="order-first hidden flex-col gap-8 border-b border-hairline bg-canvas p-5 sm:p-8 lg:order-0 lg:flex lg:border-b-0 lg:border-r lg:p-10">
                     <a href="{{ url('/') }}" wire:navigate
-                        class="hidden w-fit items-center gap-3 font-semibold tracking-tight text-neutral-950 lg:flex">
+                        class="hidden w-fit items-center gap-3 font-semibold tracking-tight text-ink lg:flex">
                         <img src="{{ asset('scrumlab-icon.svg') }}" alt="" class="size-10 shrink-0">
-                        <span>{{ config('app.name') }}</span>
+                        <span class="font-display tracking-tight">{{ config('app.name') }}</span>
                     </a>
 
                     <div class="max-w-xl lg:my-auto">
-                        <p class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Team setup
-                        </p>
                         <h2
-                            class="text-3xl font-bold leading-tight tracking-normal text-neutral-950 min-[420px]:text-4xl sm:text-5xl">
+                            class="font-display text-3xl font-bold leading-tight tracking-tight text-ink min-[420px]:text-4xl sm:text-5xl">
                             Create a place for projects, sprints, and issues.
                         </h2>
-                        <p class="mt-5 max-w-lg text-sm leading-6 text-neutral-600 sm:text-base sm:leading-7">
-                            Build a shared workspace where teammates can see priorities, owners, workflow status, and
-                            sprint progress.
-                        </p>
                     </div>
 
                     <div class="grid gap-3 min-[520px]:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                        <div class="rounded-lg border border-neutral-200 bg-white p-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Projects</p>
-                            <p class="mt-3 text-2xl font-bold">3</p>
+                        <div class="rounded-lg border border-hairline bg-white p-4">
+                            <p class="deck-label text-neutral-400">Projects</p>
+                            <p class="mt-3 font-display text-2xl font-bold tabular-nums text-ink">3</p>
                         </div>
-                        <div class="rounded-lg border border-neutral-200 bg-white p-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Sprint stages
-                            </p>
-                            <p class="mt-3 text-2xl font-bold">5</p>
+                        <div class="rounded-lg border border-hairline bg-white p-4">
+                            <p class="deck-label text-neutral-400">Sprint stages</p>
+                            <p class="mt-3 font-display text-2xl font-bold tabular-nums text-ink">5</p>
                         </div>
-                        <div class="rounded-lg border border-neutral-200 bg-white p-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">Issue types
-                            </p>
-                            <p class="mt-3 text-2xl font-bold">4</p>
+                        <div class="rounded-lg border border-hairline bg-white p-4">
+                            <p class="deck-label text-neutral-400">Issue types</p>
+                            <p class="mt-3 font-display text-2xl font-bold tabular-nums text-ink">4</p>
                         </div>
                     </div>
                 </section>

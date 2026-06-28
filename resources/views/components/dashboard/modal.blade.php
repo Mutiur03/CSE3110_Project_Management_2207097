@@ -13,7 +13,7 @@
             <div class="flex items-center justify-between gap-4 border-b border-neutral-200 px-5 py-4">
                 <h2 class="text-base font-bold text-neutral-950">{{ $title }}</h2>
                 <button type="button" data-modal-close
-                    class="grid size-8 place-items-center rounded-md text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-950">
+                    class="grid size-8 place-items-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-ink">
                     <span class="sr-only">Close</span>
                     <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="2" stroke="currentColor">
