@@ -8,38 +8,45 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.965 0.004 240);
+    --foreground: oklch(0.18 0.02 250);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.18 0.02 250);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
+    --popover-foreground: oklch(0.18 0.02 250);
     --primary: oklch(0.511 0.096 186.391);
     --primary-foreground: oklch(0.984 0.014 180.72);
-    --secondary: oklch(0.967 0.001 286.375);
-    --secondary-foreground: oklch(0.21 0.006 285.885);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.94 0.01 240);
+    --secondary-foreground: oklch(0.25 0.02 250);
+    --muted: oklch(0.95 0.006 240);
+    --muted-foreground: oklch(0.5 0.02 250);
+    --accent: oklch(0.95 0.006 240);
+    --accent-foreground: oklch(0.22 0.02 250);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --border: oklch(0.88 0.01 240);
+    --input: oklch(0.88 0.01 240);
+    --ring: oklch(0.511 0.096 186.391);
     --chart-1: oklch(0.855 0.138 181.071);
     --chart-2: oklch(0.704 0.14 182.503);
     --chart-3: oklch(0.6 0.118 184.704);
     --chart-4: oklch(0.511 0.096 186.391);
     --chart-5: oklch(0.437 0.078 188.216);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
+    --radius: 0.5rem;
+    --sidebar: oklch(0.98 0.004 240);
+    --sidebar-foreground: oklch(0.18 0.02 250);
     --sidebar-primary: oklch(0.6 0.118 184.704);
     --sidebar-primary-foreground: oklch(0.984 0.014 180.72);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-accent: oklch(0.95 0.006 240);
+    --sidebar-accent-foreground: oklch(0.22 0.02 250);
+    --sidebar-border: oklch(0.88 0.01 240);
+    --sidebar-ring: oklch(0.511 0.096 186.391);
+
+    /* Landing board atmosphere */
+    --lane-backlog: oklch(0.94 0.008 240);
+    --lane-selected: oklch(0.93 0.02 200);
+    --lane-progress: oklch(0.93 0.03 186);
+    --lane-review: oklch(0.94 0.025 160);
+    --lane-done: oklch(0.93 0.035 145);
 }
 
 .dark {
@@ -77,9 +84,9 @@
 }
 
 @theme inline {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
 
     /* semantic utilities mapped onto the shadcn token set */
@@ -111,6 +118,21 @@
 
     html {
         scroll-behavior: smooth;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
     }
 
     body {
@@ -118,6 +140,7 @@
         color: var(--foreground);
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
+        touch-action: manipulation;
     }
 
     ::selection {
@@ -130,9 +153,38 @@
         letter-spacing: -0.01em;
     }
 
-    h1, h2, h3 {
+    h1,
+    h2,
+    h3 {
         font-family: var(--font-display);
-        letter-spacing: -0.015em;
+        letter-spacing: -0.02em;
+        text-wrap: balance;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+    }
+
+    .skip-link {
+        position: absolute;
+        left: 1rem;
+        top: -100%;
+        z-index: 100;
+        border-radius: 0.375rem;
+        background: var(--foreground);
+        color: var(--background);
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .skip-link:focus {
+        top: 1rem;
+    }
+
+    [id] {
+        scroll-margin-top: 5rem;
     }
 }
 
@@ -142,5 +194,400 @@
     font-size: 0.75rem;
     line-height: 1rem;
     font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   Landing — "planning desk": a dark work surface read like the
+   tool itself. One gold accent is the brand; the status ramp is
+   used only where it carries meaning (board cards, flow dots).
+   The mono issue-key is the recurring motif.
+   ============================================================ */
+.landing-page {
+    --lp-ink: #f5f7fb;         /* page surface (light) */
+    --lp-surface: #ffffff;     /* raised panel / card */
+    --lp-surface-2: #eef1f7;   /* inner / hover */
+    --lp-line: #d7deea;        /* hairline */
+    --lp-paper: #101828;       /* high-contrast text (dark ink) */
+    --lp-muted: #52627a;       /* secondary text */
+    --lp-faint: #7b8aa1;       /* tertiary / keys */
+    --lp-gold: #eaa72c;        /* brand accent fill */
+    --lp-gold-deep: #cc8a19;   /* accent hover */
+    --lp-gold-ink: #2a1c02;    /* text on gold */
+    --lp-accent-text: #a56d12; /* accent used as text/spine on light */
+
+    /* status ramp — cool idle → live → shipped; warm is reserved for brand */
+    --st-backlog: #64748b;
+    --st-selected: #6366f1;
+    --st-progress: #0ea5e9;
+    --st-review: #8b5cf6;
+    --st-done: #10b981;
+
+    background: var(--lp-ink);
+    color: var(--lp-paper);
+}
+
+.landing-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: calc(100svh - 3.75rem);
+    display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(ellipse 62% 55% at 12% 6%, color-mix(in srgb, var(--st-progress) 10%, transparent), transparent 58%),
+        radial-gradient(ellipse 55% 50% at 92% 94%, color-mix(in srgb, var(--st-done) 9%, transparent), transparent 55%),
+        radial-gradient(circle at 50% -12%, #ffffff, var(--lp-ink) 62%);
+}
+
+/* Bricolage as the landing display face (Tailwind's @theme inline bakes the
+   utility value, so the --font-display override alone won't take — enforce here) */
+.landing-page :is(h1, h2, h3, .font-display) {
+    font-family: 'Bricolage Grotesque', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+.landing-hero__inner {
+    position: relative;
+    z-index: 10;
+    flex: 1;
+    display: grid;
+    align-items: center;
+    gap: 2rem;
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding: 2rem 1rem;
+}
+
+@media (min-width: 640px) {
+    .landing-hero__inner {
+        padding: 2.5rem 1.5rem;
+        gap: 2.5rem;
+    }
+}
+
+@media (max-width: 1023px) {
+    .landing-hero__inner {
+        align-content: center;
+    }
+}
+
+@media (min-width: 1024px) {
+    .landing-hero__inner {
+        grid-template-columns: minmax(17rem, 0.85fr) minmax(0, 1.35fr);
+        gap: 2.5rem 3rem;
+        padding: 2.5rem 2rem;
+        align-items: stretch;
+    }
+
+    .landing-hero__copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 0;
+    }
+
+    .landing-board {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        height: 100%;
+        margin-right: -1rem;
+    }
+
+    .landing-board__grid {
+        flex: 1;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.55rem;
+        min-height: 0;
+        align-content: stretch;
+    }
+
+    .landing-col {
+        min-height: 0;
+    }
+}
+
+@media (min-width: 1400px) {
+    .landing-hero__inner {
+        max-width: 96rem;
+        gap: 3rem 3.5rem;
+        padding-inline: 2.5rem;
+    }
+
+    .landing-board {
+        margin-right: -2rem;
+    }
+
+    .landing-board__grid {
+        gap: 0.7rem;
+    }
+}
+
+.landing-lanes {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+.landing-lanes > span {
+    border-right: 1px solid color-mix(in srgb, var(--lp-line) 70%, transparent);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--lane-color) 15%, transparent) 0%,
+        transparent 62%
+    );
+}
+
+.landing-lanes > span:nth-child(1) {
+    --lane-color: var(--st-backlog);
+}
+
+.landing-lanes > span:nth-child(2) {
+    --lane-color: var(--st-selected);
+}
+
+.landing-lanes > span:nth-child(3) {
+    --lane-color: var(--st-progress);
+}
+
+.landing-lanes > span:nth-child(4) {
+    --lane-color: var(--st-review);
+}
+
+.landing-lanes > span:nth-child(5) {
+    --lane-color: var(--st-done);
+    border-right: none;
+}
+
+.landing-board {
+    position: relative;
+    width: 100%;
+}
+
+.landing-board__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    height: 100%;
+}
+
+.landing-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.landing-col__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lp-faint);
+    padding-inline: 0.1rem;
+}
+
+.landing-col__head::before {
+    content: '';
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 1px;
+    flex-shrink: 0;
+    background: var(--col-accent, var(--lp-faint));
+    margin-right: 0.35rem;
+}
+
+.landing-col__count {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
     letter-spacing: 0;
+    color: color-mix(in srgb, var(--lp-faint) 80%, transparent);
+}
+
+.landing-issue {
+    position: relative;
+    border: 1px solid var(--lp-line);
+    border-left: 2px solid var(--issue-accent, var(--lp-gold));
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--lp-surface) 94%, var(--issue-accent, transparent) 6%);
+    padding: 0.65rem 0.7rem;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-issue:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--issue-accent, var(--lp-gold)) 55%, var(--lp-line));
+    box-shadow: 0 6px 16px rgba(16, 24, 40, 0.1);
+}
+
+/* one live card carries the motion — a sprint in progress */
+.landing-issue--live::after {
+    content: '';
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: var(--issue-accent, var(--lp-gold));
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--issue-accent, var(--lp-gold)) 70%, transparent);
+    animation: landing-pulse 2s ease-out infinite;
+}
+
+@media (min-width: 1024px) {
+    .landing-issue {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 4.5rem;
+    }
+}
+
+.landing-issue__key {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: color-mix(in srgb, var(--issue-accent, var(--lp-faint)) 78%, var(--lp-paper));
+}
+
+.landing-issue__title {
+    margin-top: 0.3rem;
+    font-family: var(--font-display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    color: var(--lp-paper);
+}
+
+.landing-issue__meta {
+    margin-top: 0.4rem;
+    font-size: 0.6875rem;
+    color: var(--lp-muted);
+}
+
+@media (min-width: 1400px) {
+    .landing-issue {
+        padding: 0.85rem 0.9rem;
+        min-height: 5.25rem;
+    }
+
+    .landing-issue__title {
+        font-size: 0.9rem;
+    }
+
+    .landing-issue__meta {
+        font-size: 0.75rem;
+    }
+}
+
+.landing-reveal {
+    animation: landing-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-reveal--delay {
+    animation-delay: 0.1s;
+}
+
+.landing-reveal--delay-2 {
+    animation-delay: 0.2s;
+}
+
+.landing-reveal--delay-3 {
+    animation-delay: 0.32s;
+}
+
+.landing-flow {
+    position: relative;
+}
+
+.landing-flow::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 1.15rem;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        var(--st-backlog),
+        var(--st-selected),
+        var(--st-progress),
+        var(--st-review),
+        var(--st-done)
+    );
+    opacity: 0.55;
+}
+
+.landing-flow__step {
+    position: relative;
+    padding-top: 2.25rem;
+}
+
+.landing-flow__step::before {
+    content: '';
+    position: absolute;
+    top: 0.85rem;
+    left: 0;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 2px;
+    background: var(--step-accent, var(--lp-gold));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--step-accent, var(--lp-gold)) 16%, transparent);
+}
+
+@keyframes landing-rise {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes landing-pulse {
+    0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--issue-accent, var(--lp-gold)) 55%, transparent);
+    }
+
+    70% {
+        box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--issue-accent, var(--lp-gold)) 0%, transparent);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--issue-accent, var(--lp-gold)) 0%, transparent);
+    }
+}
+
+@media (max-width: 639px) {
+    .landing-board__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing-reveal,
+    .landing-reveal--delay,
+    .landing-reveal--delay-2,
+    .landing-reveal--delay-3,
+    .landing-issue--live::after {
+        animation: none;
+    }
 }

@@ -20,6 +20,7 @@
     $isSprintsActive = request()->routeIs('projects.sprints.*');
     $isBoardActive = request()->routeIs('projects.board.*');
     $isActivityActive = request()->routeIs('projects.activity.*');
+    $isReportsActive = request()->routeIs('projects.reports.*');
     $isSettingsActive = request()->routeIs('projects.settings.*');
     $isProfileActive = request()->routeIs('profile.*');
     $canManageProject = (bool) ($currentProject->can_manage ?? false);
@@ -139,6 +140,16 @@
                             d="M12 6v6l3.5 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                     Activity
+                </a>
+
+                <a href="{{ route('projects.reports.index', $currentProject->id) }}" wire:navigate
+                    class="{{ $navBase }} {{ $isReportsActive ? $navOn : $navIdle }}">
+                    <svg class="size-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3.75 3.75v15a1.5 1.5 0 0 0 1.5 1.5h15M7.5 15.75l3-3 3 2.25 4.5-5.25" />
+                    </svg>
+                    Reports
                 </a>
             </div>
 

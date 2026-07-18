@@ -13,6 +13,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectActivityController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SprintController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -68,4 +69,5 @@ Route::middleware(['auth', 'no_back_history'])->group(function () {
     Route::get('/projects/{project}/board', [BoardController::class, 'index'])->name('projects.board.index');
     Route::patch('/projects/{project}/board/issues/{issue}/status', [BoardController::class, 'updateIssueStatus'])->name('projects.board.issues.status');
     Route::get('/projects/{project}/activity', ProjectActivityController::class)->name('projects.activity.index');
+    Route::get('/projects/{project}/reports', ReportController::class)->name('projects.reports.index');
 });

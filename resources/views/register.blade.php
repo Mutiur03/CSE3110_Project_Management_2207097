@@ -3,7 +3,7 @@
         Register
     </x-slot:title>
 
-    <main class="min-h-screen bg-canvas px-4 py-4 font-sans text-ink sm:px-6 sm:py-6 lg:px-8">
+    <main id="main-content" class="min-h-screen bg-canvas px-4 py-4 font-sans text-ink sm:px-6 sm:py-6 lg:px-8">
         <div class="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-6xl items-center sm:min-h-[calc(100vh-3rem)]">
             <div
                 class="grid w-full overflow-hidden rounded-lg border border-hairline bg-white lg:min-h-190 lg:grid-cols-[1fr_0.95fr]">
@@ -11,8 +11,9 @@
                     <div class="w-full max-w-md">
                         <a href="{{ url('/') }}" wire:navigate
                             class="mb-10 flex w-fit items-center gap-3 font-semibold tracking-tight text-ink lg:hidden">
-                            <img src="{{ asset('scrumlab-icon.svg') }}" alt="" class="size-10 shrink-0">
-                            <span class="font-display tracking-tight">{{ config('app.name') }}</span>
+                            <img src="{{ asset('scrumlab-icon.svg') }}" alt="" width="40" height="40"
+                                class="size-10 shrink-0" decoding="async">
+                            <span class="font-display tracking-tight" translate="no">{{ config('app.name') }}</span>
                         </a>
 
                         <div class="mb-8">
@@ -22,8 +23,8 @@
                         </div>
 
                         @if ($errors->any())
-                            <div class="mb-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                                Please fix the highlighted fields and try again.
+                            <div class="mb-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert" aria-live="polite">
+                                Fix the highlighted fields, then try again.
                             </div>
                         @endif
 
@@ -36,10 +37,11 @@
                                     name</label>
                                 <input type="text" id="name" name="name" value="{{ old('name') }}"
                                     autocomplete="name" required @class([
-                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
+                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-ink transition-colors placeholder:text-neutral-400 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
                                         'border-rose-300' => $errors->has('name'),
                                         'border-hairline' => !$errors->has('name'),
-                                    ])>
+                                    ])
+                                    placeholder="Alex Rivera…">
                                 @error('name')
                                     <p class="mt-2 text-sm text-rose-700">{{ $message }}</p>
                                 @enderror
@@ -49,8 +51,10 @@
                                 <label for="email" class="block text-sm font-semibold text-ink">Email
                                     address</label>
                                 <input type="email" id="email" name="email" value="{{ old('email') }}"
-                                    autocomplete="email" required @class([
-                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
+                                    autocomplete="email" spellcheck="false" required
+                                    placeholder="you@company.com…"
+                                    @class([
+                                        'mt-2 block w-full rounded-md border bg-white px-3.5 py-3 text-sm text-ink transition-colors placeholder:text-neutral-400 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
                                         'border-rose-300' => $errors->has('email'),
                                         'border-hairline' => !$errors->has('email'),
                                     ])>
@@ -66,13 +70,13 @@
                                     <div class="relative mt-2">
                                         <input type="password" id="password" name="password"
                                             autocomplete="new-password" required @class([
-                                                'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
+                                                'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-ink transition-colors placeholder:text-neutral-400 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
                                                 'border-rose-300' => $errors->has('password'),
                                                 'border-hairline' => !$errors->has('password'),
                                             ])>
                                         <button type="button" data-password-toggle="password"
                                             aria-label="Show password"
-                                            class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-ink">
+                                            class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition-colors hover:text-ink">
                                             <svg class="size-5" data-eye-icon xmlns="http://www.w3.org/2000/svg"
                                                 fill="none" viewBox="0 0 24 24" stroke-width="1.8"
                                                 stroke="currentColor" aria-hidden="true">
@@ -106,13 +110,13 @@
                                     <div class="relative mt-2">
                                         <input type="password" id="password_confirmation" name="password_confirmation"
                                             autocomplete="new-password" required @class([
-                                                'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-ink outline-none transition placeholder:text-neutral-400 focus:border-accent focus:ring-2 focus:ring-accent/20',
+                                                'block w-full rounded-md border bg-white px-3.5 py-3 pr-12 text-sm text-ink transition-colors placeholder:text-neutral-400 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
                                                 'border-rose-300' => $errors->has('password'),
                                                 'border-hairline' => !$errors->has('password'),
                                             ])>
                                         <button type="button" data-password-toggle="password_confirmation"
                                             aria-label="Show confirm password"
-                                            class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition hover:text-ink">
+                                            class="absolute inset-y-0 right-0 grid w-11 place-items-center text-neutral-500 transition-colors hover:text-ink">
                                             <svg class="size-5" data-eye-icon xmlns="http://www.w3.org/2000/svg"
                                                 fill="none" viewBox="0 0 24 24" stroke-width="1.8"
                                                 stroke="currentColor" aria-hidden="true">
@@ -153,7 +157,7 @@
                             @enderror
 
                             <button type="submit"
-                                class="flex w-full justify-center rounded-md bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-strong focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
+                                class="flex w-full justify-center rounded-md bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
                                 Create account
                             </button>
                         </form>
@@ -171,8 +175,8 @@
                     class="order-first hidden flex-col gap-8 border-b border-hairline bg-canvas p-5 sm:p-8 lg:order-0 lg:flex lg:border-b-0 lg:border-r lg:p-10">
                     <a href="{{ url('/') }}" wire:navigate
                         class="hidden w-fit items-center gap-3 font-semibold tracking-tight text-ink lg:flex">
-                        <img src="{{ asset('scrumlab-icon.svg') }}" alt="" class="size-10 shrink-0">
-                        <span class="font-display tracking-tight">{{ config('app.name') }}</span>
+                        <img src="{{ asset('scrumlab-icon.svg') }}" alt="" width="40" height="40" class="size-10 shrink-0" decoding="async">
+                        <span class="font-display tracking-tight" translate="no">{{ config('app.name') }}</span>
                     </a>
 
                     <div class="max-w-xl lg:my-auto">

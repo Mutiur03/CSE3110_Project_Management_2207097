@@ -27,3 +27,6 @@ AGENTS.md
 .agents/*
 docs
 .cursor
+*.pptx
+*.pdf
+*.docx

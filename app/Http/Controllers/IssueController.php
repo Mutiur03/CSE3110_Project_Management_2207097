@@ -350,16 +350,7 @@ class IssueController extends Controller
     private function fetchIssue(string $projectId, string $issueId): ?object
     {
         return SqlDialect::normalizeIssue(DB::selectOne(
-            'SELECT i.*,
-                    assignee.name AS assignee_name,
-                    reporter.name AS reporter_name,
-                    team.name AS team_name
-             FROM issues i
-             LEFT JOIN users assignee ON assignee.id = i.assignee_id
-             LEFT JOIN users reporter ON reporter.id = i.reporter_id
-             LEFT JOIN teams team ON team.id = i.team_id
-             WHERE i.project_id = ? AND i.id = ?
-            ',
+            'SELECT * FROM v_issue_full WHERE project_id = ? AND id = ?',
             [$projectId, $issueId],
         ));
     }
@@ -367,16 +358,9 @@ class IssueController extends Controller
     private function issuesWithChildren(string $projectId, string $parentIssueId): Collection
     {
         $children = SqlDialect::mapIssues(DB::select(
-            'SELECT i.*,
-                    assignee.name AS assignee_name,
-                    reporter.name AS reporter_name,
-                    team.name AS team_name
-             FROM issues i
-             LEFT JOIN users assignee ON assignee.id = i.assignee_id
-             LEFT JOIN users reporter ON reporter.id = i.reporter_id
-             LEFT JOIN teams team ON team.id = i.team_id
-             WHERE i.project_id = ? AND i.parent_issue_id = ?
-             ORDER BY i.key',
+            'SELECT * FROM v_issue_full
+             WHERE project_id = ? AND parent_issue_id = ?
+             ORDER BY key',
             [$projectId, $parentIssueId],
         ));
 
@@ -388,16 +372,9 @@ class IssueController extends Controller
 
         $placeholders = implode(', ', array_fill(0, count($childIds), '?'));
         $grandchildren = SqlDialect::mapIssues(DB::select(
-            "SELECT i.*,
-                    assignee.name AS assignee_name,
-                    reporter.name AS reporter_name,
-                    team.name AS team_name
-             FROM issues i
-             LEFT JOIN users assignee ON assignee.id = i.assignee_id
-             LEFT JOIN users reporter ON reporter.id = i.reporter_id
-             LEFT JOIN teams team ON team.id = i.team_id
-             WHERE i.project_id = ? AND i.parent_issue_id IN ({$placeholders})
-             ORDER BY i.key",
+            "SELECT * FROM v_issue_full
+             WHERE project_id = ? AND parent_issue_id IN ({$placeholders})
+             ORDER BY key",
             array_merge([$projectId], $childIds),
         ))->groupBy('parent_issue_id');
 

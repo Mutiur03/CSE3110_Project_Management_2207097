@@ -125,14 +125,14 @@
                         </div>
                     </div>
 
-                    @if ($canWrite)
+                    @if ($canWrite && $sprint->status !== 'completed')
                     <div class="flex flex-wrap gap-2">
                         <button type="button" data-modal-target="edit-sprint-{{ $sprint->id }}"
                             class="rounded-md border border-hairline bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-ink">
                             Edit
                         </button>
 
-                        @if ($sprint->status !== 'active')
+                        @if ($sprint->status === 'planned')
                             <form method="POST" action="{{ route('projects.sprints.start', [$currentProject->id, $sprint->id]) }}"
                                 @if ($activeSprint)
                                     onsubmit="return confirm(@js($activeSprint->name . ' is already active. Starting ' . $sprint->name . ' will move ' . $activeSprint->name . ' back to planned. Continue?'))"

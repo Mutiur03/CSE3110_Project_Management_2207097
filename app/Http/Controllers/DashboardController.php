@@ -36,18 +36,15 @@ class DashboardController extends Controller
         $projectId = $currentProject->id;
         $currentProject = $this->withProjectAccessFlags($currentProject, $userId);
 
-        $counts = DB::selectOne(
-            'SELECT
-                (SELECT COUNT(*) FROM teams WHERE project_id = ?) AS teams_count,
-                (SELECT COUNT(*) FROM issues WHERE project_id = ?) AS issues_count,
-                (SELECT COUNT(*) FROM project_members WHERE project_id = ?) AS members_count'
-            .SqlDialect::dualFrom(),
-            [$projectId, $projectId, $projectId],
+        $statsRow = DB::selectOne(
+            'SELECT issue_count, open_count, progress_pct, health, team_count, member_count
+             FROM v_project_stats WHERE project_id = ?',
+            [$projectId],
         );
 
-        $currentProject->teams_count = (int) ($counts->teams_count ?? 0);
-        $currentProject->issues_count = (int) ($counts->issues_count ?? 0);
-        $currentProject->members_count = (int) ($counts->members_count ?? 0);
+        $currentProject->teams_count = (int) ($statsRow->team_count ?? 0);
+        $currentProject->issues_count = (int) ($statsRow->issue_count ?? 0);
+        $currentProject->members_count = (int) ($statsRow->member_count ?? 0);
 
         $teams = SqlDialect::mapTeams(DB::select(
             'SELECT t.*,
@@ -85,15 +82,21 @@ class DashboardController extends Controller
 
         $sprintProgress = $sprintIssueCount > 0 ? round(($doneIssueCount / $sprintIssueCount) * 100) : 0;
 
-        $openIssues = (int) (DB::selectOne(
-            'SELECT count_open_issues(?) AS total'.SqlDialect::dualFrom(),
-            [$projectId],
-        )->total ?? 0);
+        $openIssues = (int) ($statsRow->open_count ?? 0);
+        $projectHealth = SqlDialect::clobToString($statsRow->health ?? null) ?? 'empty';
 
         $reviewIssues = (int) (DB::selectOne(
             "SELECT COUNT(*) AS total FROM issues WHERE project_id = ? AND status = 'review'",
             [$projectId],
         )->total ?? 0);
+
+        // Story points completed in the active sprint.
+        $velocity = $activeSprint
+            ? (int) (DB::selectOne(
+                'SELECT fn_sprint_velocity(?) AS points'.SqlDialect::dualFrom(),
+                [$activeSprint->id],
+            )->points ?? 0)
+            : 0;
 
         $stats = [
             [
@@ -116,6 +119,16 @@ class DashboardController extends Controller
                 'value' => (string) $reviewIssues,
                 'note' => 'Awaiting team review',
             ],
+            [
+                'label' => 'Velocity',
+                'value' => (string) $velocity,
+                'note' => $activeSprint ? 'Story points done this sprint' : 'No active sprint',
+            ],
+            [
+                'label' => 'Health',
+                'value' => ucfirst(str_replace('_', ' ', $projectHealth)),
+                'note' => 'Overall project health',
+            ],
         ];
 
         $workflow = [
@@ -128,18 +141,8 @@ class DashboardController extends Controller
 
         $issues = SqlDialect::mapIssues(DB::select(
             $activeSprint
-                ? 'SELECT i.*, assignee.name AS assignee_name, team.name AS team_name
-                   FROM issues i
-                   LEFT JOIN users assignee ON assignee.id = i.assignee_id
-                   LEFT JOIN teams team ON team.id = i.team_id
-                   WHERE i.sprint_id = ?
-                   ORDER BY i.created_at'
-                : 'SELECT i.*, assignee.name AS assignee_name, team.name AS team_name
-                   FROM issues i
-                   LEFT JOIN users assignee ON assignee.id = i.assignee_id
-                   LEFT JOIN teams team ON team.id = i.team_id
-                   WHERE i.project_id = ?
-                   ORDER BY i.created_at',
+                ? 'SELECT * FROM v_issue_full WHERE sprint_id = ? ORDER BY created_at'
+                : 'SELECT * FROM v_issue_full WHERE project_id = ? ORDER BY created_at',
             $activeSprint ? [$activeSprint->id] : [$projectId],
         ));
 

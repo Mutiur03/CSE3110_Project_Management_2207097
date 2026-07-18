@@ -45,9 +45,19 @@ class SqlDialect
 
     public static function updateIssueStatus(string $issueId, string $status): void
     {
-        DB::statement('BEGIN update_issue_status(?, ?); END;', [$issueId, $status]);
-    }
+        try {
+            DB::statement('BEGIN update_issue_status(?, ?); END;', [$issueId, $status]);
+        } catch (\Throwable $e) {
+            // Persist the failure via the autonomous logger so it survives the
+            // rolled-back transaction, then re-raise for the caller to handle.
+            DB::statement(
+                'BEGIN proc_log_error(?, ?); END;',
+                ['update_issue_status', $e->getMessage()],
+            );
 
+            throw $e;
+        }
+    }
     public static function clobToString(mixed $value): ?string
     {
         if ($value === null) {
@@ -122,6 +132,15 @@ class SqlDialect
     {
         if ($sprint === null) {
             return null;
+        }
+
+        foreach (['start_date', 'end_date'] as $dateField) {
+            if (property_exists($sprint, $dateField)) {
+                $value = $sprint->{$dateField};
+                $sprint->{$dateField} = ($value === null || $value === '')
+                    ? null
+                    : Carbon::parse($value);
+            }
         }
 
         return self::stringifyProperties($sprint, ['goal']);

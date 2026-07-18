@@ -9,25 +9,17 @@
     </title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('scrumlab-icon.svg') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|jetbrains-mono:400,500,600,700&display=swap"
+    <link
+        href="https://fonts.bunny.net/css?family=bricolage-grotesque:600,700,800|instrument-sans:500,600,700|source-sans-3:400,500,600,700|jetbrains-mono:400,500,600&display=swap"
         rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
 
 <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
     {{ $slot }}
     @livewireScripts
-    {{-- <script>
-        document.addEventListener('livewire:navigate', () => {
-            window.scrollTo(0, 0);
-        });
-        document.addEventListener('livewire:load', () => {
-            Livewire.hook('message.processed', (message, component) => {
-                window.scrollTo(0, 0);
-            });
-        });
-    </script> --}}
 </body>
 
 </html>

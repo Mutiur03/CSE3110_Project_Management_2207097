@@ -102,7 +102,7 @@
                 <div class="p-5 text-sm text-neutral-500">No child issues yet.</div>
             @else
                 <div class="overflow-x-auto">
-                    <div class="min-w-[860px]">
+                    <div class="min-w-215">
                         <div class="grid grid-cols-[minmax(24rem,1fr)_13rem_13rem_9rem_8rem] border-b border-hairline bg-canvas deck-label text-neutral-400">
                             <span class="border-r border-hairline px-3 py-3">Work</span>
                             <span class="border-r border-hairline px-3 py-3">Assignee</span>
