@@ -2,10 +2,9 @@
 
 namespace App\Notifications;
 
-use App\Events\ProjectNotificationPushed;
+use App\Support\RealtimeNotifier;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
-use Throwable;
 
 class ProjectEventNotification extends Notification
 {
@@ -34,11 +33,7 @@ class ProjectEventNotification extends Notification
     {
         $notifiable->notify($this);
 
-        try {
-            event(new ProjectNotificationPushed((string) $notifiable->getKey()));
-        } catch (Throwable $exception) {
-            report($exception);
-        }
+        RealtimeNotifier::notificationPushed((string) $notifiable->getKey());
     }
 
     private function payload(): array

@@ -318,7 +318,14 @@
                     document.querySelectorAll('[data-backlog-row]').forEach(row => {
                         let parentId = row.dataset.parentId;
                         let shouldHide = false;
+                        const seen = new Set();
+
                         while (parentId) {
+                            if (seen.has(parentId)) {
+                                break;
+                            }
+                            seen.add(parentId);
+
                             if (collapsedIssues.has(parentId)) {
                                 shouldHide = true;
                                 break;
@@ -372,24 +379,47 @@
             });
 
             let draggedBoardCard = null;
+            let boardStatusSubmitting = false;
+
+            const clearBoardColumnHighlights = () => {
+                document.querySelectorAll('[data-board-column]').forEach(column => {
+                    column.classList.remove('border-neutral-950', 'bg-white');
+                });
+            };
+
+            const submitBoardStatusForm = (form) => {
+                if (! form || boardStatusSubmitting) {
+                    return;
+                }
+
+                boardStatusSubmitting = true;
+                form.querySelectorAll('button[type="submit"]').forEach(button => {
+                    button.disabled = true;
+                });
+                form.submit();
+            };
 
             document.addEventListener('dragstart', event => {
+                if (event.target.closest('a, button, input, select, textarea, label, form')) {
+                    event.preventDefault();
+                    return;
+                }
+
                 const card = event.target.closest('[data-board-card]');
 
-                if (! card) {
+                if (! card || ! card.draggable) {
                     return;
                 }
 
                 draggedBoardCard = card;
                 card.classList.add('opacity-60');
                 event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', card.dataset.currentStatus || '');
             });
 
             document.addEventListener('dragend', event => {
                 event.target.closest('[data-board-card]')?.classList.remove('opacity-60');
-                document.querySelectorAll('[data-board-column]').forEach(column => {
-                    column.classList.remove('border-neutral-950', 'bg-white');
-                });
+                clearBoardColumnHighlights();
                 draggedBoardCard = null;
             });
 
@@ -401,6 +431,7 @@
                 }
 
                 event.preventDefault();
+                clearBoardColumnHighlights();
                 column.classList.add('border-neutral-950', 'bg-white');
                 event.dataTransfer.dropEffect = 'move';
             });
@@ -421,20 +452,41 @@
                 }
 
                 event.preventDefault();
+                clearBoardColumnHighlights();
+
                 const nextStatus = column.dataset.boardColumn;
                 const currentStatus = draggedBoardCard.dataset.currentStatus;
+                const card = draggedBoardCard;
 
                 if (! nextStatus || nextStatus === currentStatus) {
                     return;
                 }
 
-                const form = draggedBoardCard.querySelector('[data-board-drop-form]');
-                const statusInput = draggedBoardCard.querySelector('[data-board-status-input]');
+                const form = card.querySelector('[data-board-drop-form]');
+                const statusInput = card.querySelector('[data-board-status-input]');
 
                 if (form && statusInput) {
                     statusInput.value = nextStatus;
-                    form.submit();
+                    submitBoardStatusForm(form);
                 }
+            });
+
+            document.addEventListener('submit', event => {
+                const form = event.target.closest('[data-board-status-form], [data-board-drop-form]');
+
+                if (! form) {
+                    return;
+                }
+
+                if (boardStatusSubmitting) {
+                    event.preventDefault();
+                    return;
+                }
+
+                boardStatusSubmitting = true;
+                form.querySelectorAll('button[type="submit"]').forEach(button => {
+                    button.disabled = true;
+                });
             });
 
             document.addEventListener('click', event => {

@@ -86,9 +86,17 @@ class BoardController extends Controller
             [$project],
         );
 
-        abort_unless($activeSprint && $issueRow->sprint_id === $activeSprint->id, 422);
+        if (! $activeSprint || $issueRow->sprint_id !== $activeSprint->id) {
+            return redirect()
+                ->route('projects.board.index', $project)
+                ->withErrors(['board' => 'Only issues in the active sprint can be moved on the board.']);
+        }
 
         $oldStatus = $issueRow->status;
+
+        if ($oldStatus === $validated['status']) {
+            return redirect()->route('projects.board.index', $project);
+        }
 
         SqlDialect::updateIssueStatus($issue, $validated['status']);
 
@@ -103,7 +111,12 @@ class BoardController extends Controller
             newValues: ['status' => $validated['status']],
         );
 
-        $userIds = collect([$issueRow->reporter_id, $issueRow->assignee_id])->filter()->unique()->values()->all();
+        $userIds = collect([$issueRow->reporter_id, $issueRow->assignee_id])
+            ->filter()
+            ->unique()
+            ->reject(fn ($userId) => (string) $userId === (string) $request->user()->id)
+            ->values()
+            ->all();
         $url = route('projects.issues.show', [$project, $issue]);
 
         foreach ($userIds as $userId) {

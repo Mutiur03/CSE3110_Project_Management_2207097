@@ -158,10 +158,6 @@ trait AuthorizesProjectMembership
             ],
         );
 
-        try {
-            event(new \App\Events\ProjectNotificationPushed($userId));
-        } catch (\Throwable $exception) {
-            report($exception);
-        }
+        \App\Support\RealtimeNotifier::notificationPushed($userId);
     }
 }

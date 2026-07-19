@@ -108,7 +108,12 @@ class BoardTest extends TestCase
             'status' => 'in_progress',
         ]);
 
-        $response->assertUnprocessable();
+        $response->assertRedirect(route('projects.board.index', $project));
+        $response->assertSessionHasErrors('board');
+        $this->assertDatabaseHas('issues', [
+            'id' => $issue->id,
+            'status' => 'backlog',
+        ]);
     }
 
     public function test_non_project_member_cannot_view_board(): void

@@ -3,9 +3,9 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
-class ProjectNotificationPushed implements ShouldBroadcastNow
+class ProjectNotificationPushed implements ShouldBroadcast
 {
     public function __construct(
         public readonly string $userId,
